@@ -84,9 +84,10 @@
 				}
 			}
 			this.hasDom = false;
-
+			console.log(opt.view);
 			// 合并参数
-			opt.view = extend(opt.view, options.view, false);	// 补足默认参数
+			if(!!opt.view)
+				opt.view = extend(opt.view, options.view, false);	// 补足默认参数
 			this.options = extend(options, opt, true); 	
 			let _opt = this.options;
 
