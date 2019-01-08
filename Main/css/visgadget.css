@@ -30,7 +30,7 @@
     user-select: none; /* Non-prefixed version, currently*/
 }
 
-#visgadget .toolbar:hover{
+#visgadget .topbar:hover{
     background: rgb(243, 232, 212);
 }
 
@@ -45,5 +45,32 @@
     opacity: 1;
     transition:opacity 0.5s;
 }
+
+#visgadget .toolbox{
+    position: absolute;
+    background: rgb(236, 154, 154);
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 60%;
+    overflow-y:scroll
+}
+
+#visgadget .toolbox::-webkit-scrollbar {
+    display:none
+}
+
+#visgadget .toolbtn{
+    float: left;
+    background: rgb(221, 228, 210);
+    margin: 5px;
+    border-radius: 9px;
+}
+
+#visgadget .toolbtn:hover{
+    background: rgb(243, 232, 212);
+}
+
+
 
 

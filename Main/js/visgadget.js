@@ -1,5 +1,4 @@
-;
-(function (undefined) {
+;(function (undefined) {
 	"use strict"
 	let _global;
 
@@ -34,26 +33,27 @@
 			ty = y;
 		let rect = rects;
 
-		// 检测左右边缘
+		// 左右边缘
 		if(tx - rect.left<30){
 			tx = rect.left;
 		}else if(tx + rect.width - myRect.left - myRect.width < 15){
 			tx = rect.left + rect.width - myRect.width;
 		}
-
-		// 修正边缘溢出
+		// 修正
 		if(tx > rect.left + rect.width - myRect.width){
 			tx = rect.left + rect.width - myRect.width;
 		}
 
-		// 检测上下边缘
+		// 上下边缘
 		if(ty - rect.top<15){
 			ty = rect.top;
 		}else if(rect.top + rect.height - ty - myRect.height< 15){
 			//ty = rect.top + rect.height - myRect.height;
 		}
+		
 		return [tx,ty];
 	}
+
 
 	//构造函数
 	function VisGadget(opt) {
@@ -63,6 +63,7 @@
 	VisGadget.prototype = {
 		constructor: this,
 		_initial: function (opt) {
+			let _title = 'VisGadGet 0.1';
 			let options = {
 				ok: true,
 				ok_txt: '确定',
@@ -74,15 +75,18 @@
 				targetId: [],
 				target: [],
 				view: {
-					dom:null,
+					dom:null,		// VisGadget的dom节点
+					title:_title,	// 标题
 					width: 300,
 					height: 700,
-					title:'VisGadGet 0.1'
+					rows:4,			// toolbox 行数
+					columns :3,		// toolbox 列数
 				}
 			}
 			this.hasDom = false;
 
 			// 合并参数
+			opt.view = extend(opt.view, options.view, false);	// 补足默认参数
 			this.options = extend(options, opt, true); 	
 			let _opt = this.options;
 
@@ -99,7 +103,11 @@
 
 			// 新建工具栏
 			if (!!_opt.view) {
-				this.createDom(options);
+
+				if(!_opt.view.title)
+					_opt.view.title = _title;
+				
+				this.createDom(_opt);
 			}
 		},
 		createDom: function () {
@@ -111,17 +119,18 @@
 			let _dom = this.options.dom;
 
 			// 设置样式
+			_dom.id = 'visgadget';
 			_dom.style.width = view.width + 'px';
 			_dom.style.height = view.height + 'px';
 			_dom.style.top = targetRect.top + 'px';
 			_dom.style.left = targetRect.left + targetRect.width - view.width + 'px';
-			_dom.id = 'visgadget';
+			document.body.appendChild(_dom);
 			
 			// 添加顶部栏
 			let topBar = document.createElement('div');
+			topBar.className = 'topbar';
 			topBar.innerHTML = view.title;
 			topBar.draggable = true;
-			topBar.className = 'topbar';
 			let arrow = document.createElement('div');
 			arrow.className = 'fa fa-chevron-down';
 			topBar.appendChild(arrow);
@@ -133,11 +142,23 @@
 			_dom.appendChild(pannel);
 		
 			// 添加按钮区域
+			let toolbox = document.createElement('div');
+			toolbox.className = 'toolbox';
+			pannel.appendChild(toolbox);
 			
-			document.body.appendChild(_dom);
+			let _btnWidth = (toolbox.offsetWidth -  ((this.options.view.columns - 1)*2 + 2)*5)/this.options.view.columns + 'px';
+			let _btnHeight = (toolbox.offsetHeight - ((this.options.view.rows - 1)*2 + 2)*5)/this.options.view.rows + 'px';
+			this.addButton();
+			for(let i = 0;i<15;i++){
+				let _btn = document.createElement('div');
+				_btn.className = 'toolbtn';
+				_btn.style.width = _btnWidth;
+				_btn.style.height = _btnHeight;
+				console.log(_btn.style.width)
+				toolbox.append(_btn);
+			}
 
 			/*************************** 设置view事件 *************************/
-
 			// 隐藏工具栏
 			topBar.onclick = function(){
 				if(arrow.className == 'fa fa-chevron-down'){
@@ -157,8 +178,6 @@
 					_dom.style.height = view.height + 'px';
 					setTimeout(function () {
 						pannel.style.opacity = 1;
-						
-		
 					},.1);
 				}
 			}
@@ -181,6 +200,13 @@
 
 
 
+		},
+		addButton:function(o){
+			let toolbox = document.getElementsByClassName('toolbox')[0];
+			let button = document.createElement('button');
+			let _btnWidth = (toolbox.offsetWidth -  ((this.options.view.columns - 1)*2 + 2)*5)/this.options.view.columns + 'px';
+			let _btnHeight = (toolbox.offsetHeight - ((this.options.view.rows - 1)*2 + 2)*5)/this.options.view.rows + 'px';
+			button.className = 'toolbtn';
 		},
 		parseToDom: function (str) { // 将字符串转为dom
 			let div = document.createElement('div');
