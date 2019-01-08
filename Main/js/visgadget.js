@@ -29,7 +29,7 @@
 	}
 
 	// 边缘停靠
-	function toolboxDock(x,y,myRect,rects){
+	function viewDock(x,y,myRect,rects){
 		let tx = x,
 			ty = y;
 		let rect = rects;
@@ -63,7 +63,7 @@
 	VisGadget.prototype = {
 		constructor: this,
 		_initial: function (opt) {
-			let option = {
+			let options = {
 				ok: true,
 				ok_txt: '确定',
 				cancel: false,
@@ -73,7 +73,7 @@
 				content: '',
 				targetId: [],
 				target: [],
-				toolbox: {
+				view: {
 					dom:null,
 					width: 300,
 					height: 700,
@@ -83,8 +83,8 @@
 			this.hasDom = false;
 
 			// 合并参数
-			this.option = extend(option, opt, true); 	
-			let _opt = this.option;
+			this.options = extend(options, opt, true); 	
+			let _opt = this.options;
 
 			// id去重	
 			_opt.targetId = Array.from(new Set(_opt.targetId)); 	
@@ -98,60 +98,63 @@
 			});	
 
 			// 新建工具栏
-			if (!!_opt.toolbox) {
-				this.createToolbox(option);
+			if (!!_opt.view) {
+				this.createDom(options);
 			}
 		},
-		createToolbox: function () {
-			let toolbox = this.option.toolbox;
-			let targetRect = this.option.target[0].getBoundingClientRect();
-			/*************************** 设置toolbox样式 *************************/
-			this.option.dom = document.createElement('div');
-			let _dom = this.option.dom;
+		createDom: function () {
+			let view = this.options.view;
+			let targetRect = this.options.target[0].getBoundingClientRect();
+			/*************************** 设置view样式 *************************/
 
-			//设置样式
-			_dom.style.width = toolbox.width + 'px';
-			_dom.style.height = toolbox.height + 'px';
+			this.options.dom = document.createElement('div');
+			let _dom = this.options.dom;
+
+			// 设置样式
+			_dom.style.width = view.width + 'px';
+			_dom.style.height = view.height + 'px';
 			_dom.style.top = targetRect.top + 'px';
-			_dom.style.left = targetRect.left + targetRect.width - toolbox.width + 'px';
+			_dom.style.left = targetRect.left + targetRect.width - view.width + 'px';
 			_dom.id = 'visgadget';
 			
-			//添加顶部div
-			let toolbar = document.createElement('div');
-			toolbar.innerHTML = toolbox.title;
-			toolbar.draggable = true;
-			toolbar.className = 'toolbar';
-			let triangle = document.createElement('div');
-			triangle.className = 'fa fa-chevron-down';
-			toolbar.appendChild(triangle);
-			_dom.appendChild(toolbar);
+			// 添加顶部栏
+			let topBar = document.createElement('div');
+			topBar.innerHTML = view.title;
+			topBar.draggable = true;
+			topBar.className = 'topbar';
+			let arrow = document.createElement('div');
+			arrow.className = 'fa fa-chevron-down';
+			topBar.appendChild(arrow);
+			_dom.appendChild(topBar);
 
-			//添加主体面板
+			// 添加主体面板
 			let pannel = document.createElement('div');
 			pannel.className = 'pannel';
 			_dom.appendChild(pannel);
 		
+			// 添加按钮区域
+			
 			document.body.appendChild(_dom);
 
-			/*************************** 设置toolbox事件 *************************/
+			/*************************** 设置view事件 *************************/
 
 			// 隐藏工具栏
-			toolbar.onclick = function(){
-				if(triangle.className == 'fa fa-chevron-down'){
-					triangle.className = 'fa fa-chevron-up'
+			topBar.onclick = function(){
+				if(arrow.className == 'fa fa-chevron-down'){
+					arrow.className = 'fa fa-chevron-up'
 					//pannel.style.bottom = '100%';
 					pannel.style.opacity = 0;
 					setTimeout(function () {
 						pannel.style.display ='none';
-						_dom.style.height = toolbar.style.height;
+						_dom.style.height = topBar.style.height;
 		
 					},500);
 					
 				}else{
-					triangle.className = 'fa fa-chevron-down'
+					arrow.className = 'fa fa-chevron-down'
 					//pannel.style.bottom = '0%';
 					pannel.style.display = 'block';
-					_dom.style.height = toolbox.height + 'px';
+					_dom.style.height = view.height + 'px';
 					setTimeout(function () {
 						pannel.style.opacity = 1;
 						
@@ -159,19 +162,19 @@
 					},.1);
 				}
 			}
-			toolbar.ondragstart = function(ev,i){
+			topBar.ondragstart = function(ev,i){
 				let rect = _dom.getBoundingClientRect();
 				_dom.dx = ev.clientX - rect.left;
 				_dom.dy = ev.clientY - rect.top;
 
 			}
-			toolbar.ondrag = function(ev){
-				let pos = toolboxDock(ev.clientX - _dom.dx,ev.clientY - _dom.dy,_dom.getBoundingClientRect(),document.body.getBoundingClientRect());
+			topBar.ondrag = function(ev){
+				let pos = viewDock(ev.clientX - _dom.dx,ev.clientY - _dom.dy,_dom.getBoundingClientRect(),document.body.getBoundingClientRect());
 				_dom.style.left = pos[0] + 'px';
 				_dom.style.top = pos[1] + 'px';
 			}
-			toolbar.ondragend = function(ev){
-				let pos = toolboxDock(ev.clientX - _dom.dx,ev.clientY - _dom.dy,_dom.getBoundingClientRect(),document.body.getBoundingClientRect());
+			topBar.ondragend = function(ev){
+				let pos = viewDock(ev.clientX - _dom.dx,ev.clientY - _dom.dy,_dom.getBoundingClientRect(),document.body.getBoundingClientRect());
 				_dom.style.left = pos[0] + 'px';
 				_dom.style.top = pos[1] + 'px';
 			}
@@ -186,32 +189,13 @@
 			}
 			return div.childNodes;
 		},
-		show: function (callback) {
-			let _this = this;
-			if (this.hasDom) return;
-			document.body.appendChild(this.dom);
-			this.hasDom = true;
-			document.getElementsByClass('close', this.dom)[0].onclick = function () {
-				_this.hide();
-			};
-			document.getElementsByClass('btn-ok', this.dom)[0].onclick = function () {
-				_this.hide();
-			};
-			if (this.option.cancel) {
-				document.getElementsByClass('btn-cancel', this.dom)[0].onclick = function () {
-					_this.hide();
-				};
-			}
-			callback && callback();
-			return this;
-		},
 		hide: function (callback) {
 			document.body.removeChild(this.dom);
 			this.hasDom = false;
 			callback && callback();
 			return this;
 		},
-		toolboxCSS: function (n, v) {
+		viewCSS: function (n, v) {
 			if (this.dom.style.hasOwnProperty(n)) {
 				this.dom.style[n] = v;
 			}
