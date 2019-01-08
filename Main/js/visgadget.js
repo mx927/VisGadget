@@ -50,7 +50,7 @@
 		if(ty - rect.top<15){
 			ty = rect.top;
 		}else if(rect.top + rect.height - ty - myRect.height< 15){
-			ty = rect.top + rect.height - myRect.height;
+			//ty = rect.top + rect.height - myRect.height;
 		}
 		return [tx,ty];
 	}
@@ -74,6 +74,7 @@
 				targetId: [],
 				target: [],
 				toolbox: {
+					dom:null,
 					width: 300,
 					height: 700,
 					title:'VisGadGet 0.1'
@@ -98,29 +99,22 @@
 
 			// 新建工具栏
 			if (!!_opt.toolbox) {
-				this.createDom(option);
+				this.createToolbox(option);
 			}
 		},
-		createDom: function () {
-
-			let dom = this.dom;
+		createToolbox: function () {
 			let toolbox = this.option.toolbox;
 			let targetRect = this.option.target[0].getBoundingClientRect();
-
-			if (dom instanceof HTMLElement) {
-				document.body.removeChild(dom);
-				dom = null;
-			}
-
-			/*************************** 设置Dom样式 *************************/
-			this.dom = document.createElement('div');
+			/*************************** 设置toolbox样式 *************************/
+			this.option.dom = document.createElement('div');
+			let _dom = this.option.dom;
 
 			//设置样式
-			this.dom.style.width = toolbox.width + 'px';
-			this.dom.style.height = toolbox.height + 'px';
-			this.dom.style.top = targetRect.top + 'px';
-			this.dom.style.left = targetRect.left + targetRect.width - toolbox.width + 'px';
-			this.dom.id = 'visgadget';
+			_dom.style.width = toolbox.width + 'px';
+			_dom.style.height = toolbox.height + 'px';
+			_dom.style.top = targetRect.top + 'px';
+			_dom.style.left = targetRect.left + targetRect.width - toolbox.width + 'px';
+			_dom.id = 'visgadget';
 			
 			//添加顶部div
 			let toolbar = document.createElement('div');
@@ -130,19 +124,41 @@
 			let triangle = document.createElement('div');
 			triangle.className = 'fa fa-chevron-down';
 			toolbar.appendChild(triangle);
+			_dom.appendChild(toolbar);
 
 			//添加主体面板
 			let pannel = document.createElement('div');
 			pannel.className = 'pannel';
+			_dom.appendChild(pannel);
+		
+			document.body.appendChild(_dom);
 
-			this.dom.appendChild(toolbar);
-			this.dom.appendChild(pannel);
-			
-			
-			document.body.appendChild(this.dom);
+			/*************************** 设置toolbox事件 *************************/
 
-			/*************************** 设置Dom事件 *************************/
-			let _dom = this.dom;
+			// 隐藏工具栏
+			toolbar.onclick = function(){
+				if(triangle.className == 'fa fa-chevron-down'){
+					triangle.className = 'fa fa-chevron-up'
+					//pannel.style.bottom = '100%';
+					pannel.style.opacity = 0;
+					setTimeout(function () {
+						pannel.style.display ='none';
+						_dom.style.height = toolbar.style.height;
+		
+					},500);
+					
+				}else{
+					triangle.className = 'fa fa-chevron-down'
+					//pannel.style.bottom = '0%';
+					pannel.style.display = 'block';
+					_dom.style.height = toolbox.height + 'px';
+					setTimeout(function () {
+						pannel.style.opacity = 1;
+						
+		
+					},.1);
+				}
+			}
 			toolbar.ondragstart = function(ev,i){
 				let rect = _dom.getBoundingClientRect();
 				_dom.dx = ev.clientX - rect.left;
@@ -159,15 +175,9 @@
 				_dom.style.left = pos[0] + 'px';
 				_dom.style.top = pos[1] + 'px';
 			}
-			toolbar.onclick = function(){
-				if(triangle.className == 'fa fa-chevron-down'){
-					triangle.className = 'fa fa-chevron-up'
-					pannel.style.bottom = '100%';
-				}else{
-					triangle.className = 'fa fa-chevron-down'
-					pannel.style.bottom = '0%';
-				}
-			}
+
+
+
 		},
 		parseToDom: function (str) { // 将字符串转为dom
 			let div = document.createElement('div');

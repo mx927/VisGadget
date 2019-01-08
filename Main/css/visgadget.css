@@ -42,7 +42,8 @@
     width: 100%;
     top:25px;
     bottom: 0%;
-    transition:bottom 0.3s;
+    opacity: 1;
+    transition:opacity 0.5s;
 }
 
 
