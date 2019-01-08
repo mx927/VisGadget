@@ -28,6 +28,33 @@
 		((typeof HTMLDocument !== 'undefined') ? HTMLDocument : Document).prototype.getElementsByClass = HTMLElement.prototype.getElementsByClass;
 	}
 
+	// 边缘停靠
+	function toolboxDock(x,y,myRect,rects){
+		let tx = x,
+			ty = y;
+		let rect = rects;
+
+		// 检测左右边缘
+		if(tx - rect.left<30){
+			tx = rect.left;
+		}else if(tx + rect.width - myRect.left - myRect.width < 15){
+			tx = rect.left + rect.width - myRect.width;
+		}
+
+		// 修正边缘溢出
+		if(tx > rect.left + rect.width - myRect.width){
+			tx = rect.left + rect.width - myRect.width;
+		}
+
+		// 检测上下边缘
+		if(ty - rect.top<15){
+			ty = rect.top;
+		}else if(rect.top + rect.height - ty - myRect.height< 15){
+			ty = rect.top + rect.height - myRect.height;
+		}
+		return [tx,ty];
+	}
+
 	//构造函数
 	function VisGadget(opt) {
 		this._initial(opt);
@@ -53,9 +80,9 @@
 				}
 			}
 			this.hasDom = false;
+
 			// 合并参数
 			this.option = extend(option, opt, true); 	
-
 			let _opt = this.option;
 
 			// id去重	
@@ -103,12 +130,10 @@
 			let triangle = document.createElement('div');
 			triangle.className = 'fa fa-chevron-down';
 			toolbar.appendChild(triangle);
-			
 
 			//添加主体面板
 			let pannel = document.createElement('div');
 			pannel.className = 'pannel';
-
 
 			this.dom.appendChild(toolbar);
 			this.dom.appendChild(pannel);
@@ -117,13 +142,22 @@
 			document.body.appendChild(this.dom);
 
 			/*************************** 设置Dom事件 *************************/
+			let _dom = this.dom;
 			toolbar.ondragstart = function(ev,i){
-				let cx = ev.clientX,
-					cy = ev.clientY;
-				console.log(ev);
+				let rect = _dom.getBoundingClientRect();
+				_dom.dx = ev.clientX - rect.left;
+				_dom.dy = ev.clientY - rect.top;
+
 			}
 			toolbar.ondrag = function(ev){
-			//	console.log(ev);
+				let pos = toolboxDock(ev.clientX - _dom.dx,ev.clientY - _dom.dy,_dom.getBoundingClientRect(),document.body.getBoundingClientRect());
+				_dom.style.left = pos[0] + 'px';
+				_dom.style.top = pos[1] + 'px';
+			}
+			toolbar.ondragend = function(ev){
+				let pos = toolboxDock(ev.clientX - _dom.dx,ev.clientY - _dom.dy,_dom.getBoundingClientRect(),document.body.getBoundingClientRect());
+				_dom.style.left = pos[0] + 'px';
+				_dom.style.top = pos[1] + 'px';
 			}
 			toolbar.onclick = function(){
 				if(triangle.className == 'fa fa-chevron-down'){
