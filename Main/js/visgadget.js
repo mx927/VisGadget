@@ -1,4 +1,11 @@
-;(function (undefined) {
+/*
+ * @Author: MX 
+ * @Date: 2019-01-09 13:07:09 
+ * @Last Modified by: MX
+ * @Last Modified time: 2019-01-09 13:07:50
+ */
+
+;(function (undefined) {   
 	"use strict"
 	let _global;
 
