@@ -1,10 +1,12 @@
 /*
  * @Author: MX 
  * @Date: 2019-01-09 13:07:09 
- * @Last Modified by: mikey.zhaopeng
- * @Last Modified time: 2019-01-09 19:10:03
+ * @Last Modified by: MX
+ * @Last Modified time: 2019-01-10 15:22:18
  */
+  
 
+ 
 ;
 (function (undefined) {
 	"use strict"
@@ -315,7 +317,10 @@
 
 			}
 			topBar.ondrag = function (ev) {
-				let pos = viewDock(ev.clientX - _dom.dx, ev.clientY - _dom.dy, _dom.getBoundingClientRect(), document.body.getBoundingClientRect());
+				let tx = ev.clientX - _dom.dx;
+				let ty = ev.clientY - _dom.dy;
+				if(tx < 0 || ty < 0) return;
+				let pos = viewDock(tx,ty , _dom.getBoundingClientRect(), document.body.getBoundingClientRect());
 				_dom.style.left = pos[0] + 'px';
 				_dom.style.top = pos[1] + 'px';
 			}
@@ -328,7 +333,7 @@
 
 
 		},
-		addButton: function (o) {
+		addButton: function (btnOption) {
 
 			let toolbox = document.getElementsByClassName('vd_toolbox')[0];
 			let button = document.createElement('div');
@@ -342,29 +347,29 @@
 
 
 			//添加图片
-			if (o.picture) {
+			if (btnOption.picture) {
 				let img = document.createElement('img');
-				img.src = o.picture;
+				img.src = btnOption.picture;
 				img.draggable = false;
 				button.appendChild(img);
 			}
 
 			//添加文本信息
-			if (o.text) {
+			if (btnOption.text) {
 				let p = document.createElement('p');
-				p.innerHTML = o.text;
+				p.innerHTML = btnOption.text;
 				button.appendChild(p);
 			}
 
 
 			//添加class
-			if (o.class) {
-				button.className += ' ' + o.class;
+			if (btnOption.class) {
+				button.className += ' ' + btnOption.class;
 			}
 
 			//添加鼠标事件
-			if (o.onclick) {
-				button.onclick = o.onclick;
+			if (btnOption.onclick) {
+				button.onclick = btnOption.onclick;
 			}
 
 
