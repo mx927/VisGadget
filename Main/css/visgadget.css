@@ -88,12 +88,12 @@
 
 }
 
-.vd_toolbtn img{
+.vd_toolbtn svg{
 
     position: absolute;
-    width:65%;
+    width:50%;
     top: 17.5%; 
-    left:17.5%;
+    left:25%;
     background: transparent;
     vertical-align:middle;
 }
