@@ -6,9 +6,18 @@
     z-index: 3;
     left: 0%;
     top:0%;
+
+
+     /*禁止选择文本*/
+     -webkit-touch-callout: none; /* iOS Safari */
+     -webkit-user-select: none; /* Chrome/Safari/Opera */
+     -moz-user-select: none; /* Firefox */
+     -ms-user-select: none; /* Internet Explorer/Edge */
+     user-select: none; /* Non-prefixed version, currently*/
+    
 }
 
-#visgadget .topbar{
+.vd_topbar{
     position: relative;
     background: wheat;
     margin: 0;
@@ -21,20 +30,14 @@
     font-weight: bolder;
     letter-spacing: 1px;
     line-height: 25px;
-    
-    /*禁止选择文本*/
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Chrome/Safari/Opera */
-    -moz-user-select: none; /* Firefox */
-    -ms-user-select: none; /* Internet Explorer/Edge */
-    user-select: none; /* Non-prefixed version, currently*/
+
 }
 
-#visgadget .topbar:hover{
+.vd_topbar:hover{
     background: rgb(243, 232, 212);
 }
 
-#visgadget .pannel{
+.vd_pannel{
     position: absolute;
     background: rgb(209, 214, 202);
     margin: 0;
@@ -46,7 +49,7 @@
     transition:opacity 0.5s;
 }
 
-#visgadget .toolbox{
+.vd_toolbox{
     position: absolute;
     background: rgb(236, 154, 154);
     margin: 0;
@@ -54,21 +57,45 @@
     width: 100%;
     height: 60%;
     overflow-y:scroll
+    
 }
 
-#visgadget .toolbox::-webkit-scrollbar {
+.vd_toolbox::-webkit-scrollbar {
     display:none
 }
 
-#visgadget .toolbtn{
+.vd_toolbtn{
+    position: relative;
     float: left;
-    background: rgb(221, 228, 210);
+    background: rgb(221, 228, 210); 
     margin: 5px;
     border-radius: 9px;
+ 
+}
+.vd_toolbtn:hover{
+    background: rgb(243, 232, 212);
 }
 
-#visgadget .toolbtn:hover{
-    background: rgb(243, 232, 212);
+.vd_toolbtn p{ 
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    bottom:0;
+    border: 0;
+    width: 100%;
+    text-align: center;
+
+
+}
+
+.vd_toolbtn img{
+
+    position: absolute;
+    width:65%;
+    top: 17.5%; 
+    left:17.5%;
+    background: transparent;
+    vertical-align:middle;
 }
 
 
