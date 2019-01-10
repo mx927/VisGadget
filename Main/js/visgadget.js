@@ -2,7 +2,7 @@
  * @Author: MX 
  * @Date: 2019-01-09 13:07:09 
  * @Last Modified by: MX
- * @Last Modified time: 2019-01-10 21:00:16
+ * @Last Modified time: 2019-01-10 21:01:36
  */
 ;
 (function (undefined) {
@@ -406,10 +406,6 @@
 		svgDom.setAttribute('fill',color);
 		return svgDom;
 	}
-
-
-
-
 
 	// 将插件对象暴露给全局对象
 	_global = (function () {
