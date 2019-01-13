@@ -13,7 +13,7 @@
 例如：
 ```Javascript
 var vd = new VisGadget({
-                targetId:['svg1','svg2'],
+                targetIdArr:['svg1','svg2'],
                 view:{width:300},
                 title:'VisGadGet 0.1'
             });
@@ -24,7 +24,7 @@ var vd = new VisGadget({
 
 | 名称 | 说明 |数据格式 | 默认值 |
 | ---  | --- | --- |--- |
-| targetId | 目标的svg元素ID数组(这是因为可以同时监听多个svg元素) | `[string]` | / |
+| targetIdArr | 目标的svg元素ID数组(这是因为可以同时监听多个svg元素) | `[string]` | / |
 | view     | toolbox设置参数,如果不需要toolbox，请设置为`null`。 | `json`     | / |
 
 
@@ -45,26 +45,50 @@ var vd = new VisGadget({
 
 ## **接口**   
 ---
-### **addButton** : 用于添加toolbox中的功能按钮
-**`vd.addButton(btnOption);`**   
+### **addButton** : 添加toolbox中的功能按钮
+>**`vd.addButton(btnOption);`**   
+> 如:    
+> ```Javascript
+> //vd是VisGadget实例
+> vd.addButton({
+>    name: 'Pointer', 
+>    picture: 'images/pointer.png',
+>    class: null,
+>    onclick: null
+>    });
+> ```
+>
+>### **btnOption**   
+>
+>| 名称 | 说明 | 数据格式 | 默认值 |
+>| ---               | --- | ---| --- |
+>| btnOption.text    | 说明文字               | `string`   | `null` |
+>| btnOption.picture | 图片路径               | `string`   | `null` |
+>| btnOption.class   | 添加className(可选)    | `string`   | `null` |
+>| btnOption.onclick | 点击事件               | `function` | `null` |
+   
 
-如:    
+### **onlyUseButtons** : 仅使用指定的默认功能按钮
 
-```Javascript
-//vd是VisGadget实例
-vd.addButton({
-    text: 'Pointer', 
-    picture: 'images/pointer.png',
-    class: null,
-    onclick: null
-    });
-```
+>**`vd.onlyUseButtons(nameArr);`**   
+>
+> 如:    
+> ```Javascript
+> //vd是VisGadget实例
+> vd.onlyUseButtons(['Pointer','Zoom']);
+> ```
+>
+>### **nameArr**  :字符数组，对应按钮的name属性
 
-### **btnOption**   
 
-| 名称 | 说明 | 数据格式 | 默认值 |
-| ---               | --- | ---| --- |
-| btnOption.text    | 说明文字               | `string`   | `null` |
-| btnOption.picture | 图片路径               | `string`   | `null` |
-| btnOption.class   | 添加className(可选)    | `string`   | `null` |
-| btnOption.onclick | 点击事件               | `function` | `null` |
+### **unUseButtons** : 删除指定的默认功能按钮
+
+>**`vd.unUseButtons(nameArr);`**   
+>
+> 如:    
+> ```Javascript
+> //vd是VisGadget实例
+> vd.unUseButtons(['Pointer','Zoom']);
+> ```
+>
+>### **nameArr**  :字符数组，对应按钮的name属性

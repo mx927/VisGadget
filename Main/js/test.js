@@ -4,8 +4,7 @@ link.rel = "stylesheet";
 document.head.appendChild(link);
 
 var vd = new VisGadget({
-    targetId: ["mysvg"],
+    targetIdArr: ["mysvg"],
     view:{
-
     }
 })
