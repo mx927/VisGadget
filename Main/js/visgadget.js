@@ -2,7 +2,7 @@
  * @Author: MX 
  * @Date: 2019-01-09 13:07:09 
  * @Last Modified by: MX
- * @Last Modified time: 2019-01-14 23:40:10
+ * @Last Modified time: 2019-01-15 00:23:20
  */
 ;
 (function (undefined) {
@@ -118,15 +118,6 @@
 			// 	under[1].dispatchEvent(new_ev_over);
 			// })
 
-			let myRect = new ShapeObject('rect');
-			myRect.attr('x', 100)
-				.attr('y', 100)
-				.attr('width', 100)
-				.attr('height', 100);
-
-			this.shapes.push(myRect);
-			this._redraw();
-
 		},
 
 		_setStatus: function (type) {
@@ -212,8 +203,6 @@
 						canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.3)';
 						break;
 					}
-
-
 			}
 
 		},
