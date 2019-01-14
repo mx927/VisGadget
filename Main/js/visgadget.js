@@ -2,7 +2,7 @@
  * @Author: MX 
  * @Date: 2019-01-09 13:07:09 
  * @Last Modified by: MX
- * @Last Modified time: 2019-01-13 19:39:06
+ * @Last Modified time: 2019-01-14 23:40:10
  */
 ;
 (function (undefined) {
@@ -10,46 +10,315 @@
 	let _global;
 
 
+	// 以下是CanvasObject的状态标识符
+	const canvasObj_pointer = 'pointer'; // 指针， 可操作CanvasObject内部元素
+	const canvasObj_rectReady = 'rectReady'; // 矩形， 准备绘制矩形
+	const canvasObj_rectProcessing = 'rectProcessing'; // 矩形， 正在根据用户操作绘制矩形
+	const canvasObj_cancel = 'cancel'; // 不激活，鼠标事件会穿透canvas元素
+
+
+
+
+
+
+	function ShapeObject(type) {
+		this.type = type;
+		this._initial();
+	}
+
+	ShapeObject.prototype = {
+		constructor: this,
+		_initial: function () {
+			switch (this.type) {
+				case 'rect':
+					this['x'] = 0; // x坐标
+					this['y'] = 0; // y坐标
+					this['rx'] = 0; // x圆角值
+					this['ry'] = 0; // y圆角值
+					this['width'] = 1; // 宽度
+					this['height'] = 1; // 高度
+					this['fill'] = 'steelblue'; // 矩形颜色
+					this['fill-opacity'] = 0.5; // 矩形透明度
+					this['stroke-width'] = 0.5; // 边框宽度
+					this['stroke'] = 'black'; // 边框颜色
+					this['stroke-opacity'] = 1; // 边框透明度
+					this['opacity'] = 1; // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
+					break;
+			}
+		},
+		_confirm: function () {
+			if (this.type == 'rect') {
+
+			}
+		},
+		attr: function (attribute, value) {
+			if (!attribute)
+				return this
+
+			// 设置属性，链式调用(返回this)
+			if (value) {
+				this[attribute] = value;
+				this._confirm();
+				return this;
+			}
+			// 返回属性值
+			else {
+				return this[attribute];
+			}
+		},
+	}
+
+
+	function CanvasObject(goal) {
+
+		console.log(goal)
+		this.canvas = null;
+		this.goal = goal;
+
+		this.status = canvasObj_cancel;
+		this.shapes = [];
+		this.currentShape = null;
+		this._initial();
+
+
+	}
+
+	CanvasObject.prototype = {
+		constructor: this,
+		_initial: function () {
+			this.canvas = document.createElement('canvas');
+
+			let canvas = this.canvas;
+			let goal = this.goal;
+			let svgRect = this.goal.getClientRects()[0];
+
+			canvas.style.position = 'absolute'
+			canvas.width = goal.width.animVal.value;
+			canvas.height = goal.height.animVal.value;
+			canvas.style.left = svgRect.left + 'px';
+			canvas.style.top = svgRect.top + getScrollTop() + 'px';
+			canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.3)';
+			//canvas.style.cursor = 'move';
+			canvas.style.pointerEvents = 'none'
+
+
+			canvas.oncontextmenu = function () {
+				return false;
+			}
+
+			document.body.appendChild(canvas);
+
+			// // 将鼠标事件传给下级元素
+			// canvas.addEventListener('mousemove',function(ev){
+			// 	let px = ev.pageX;
+			// 	let py = ev.pageY;
+			// 	let under = document.elementsFromPoint(px,py);
+			// 	let new_ev_move = new ev.constructor(ev.type,ev);
+			// 	let new_ev_over = new ev.constructor('mouseover',ev);
+			// 	under[1].dispatchEvent(new_ev_over);
+			// })
+
+			let myRect = new ShapeObject('rect');
+			myRect.attr('x', 100)
+				.attr('y', 100)
+				.attr('width', 100)
+				.attr('height', 100);
+
+			this.shapes.push(myRect);
+			this._redraw();
+
+		},
+
+		_setStatus: function (type) {
+			let _this = this;
+			let canvas = this.canvas;
+			canvas.style.pointerEvents = 'auto';
+			canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.5)';
+			switch (type) {
+
+				case canvasObj_pointer:
+					{
+						this.status = canvasObj_pointer;
+						break;
+					}
+
+				case canvasObj_rectReady:
+					{
+						this.status = canvasObj_rectReady;
+						canvas.onmousedown = function (ev) {
+							_this.currentShape = new ShapeObject('rect');
+							_this.currentShape
+								.attr('x', ev.offsetX)
+								.attr('y', ev.offsetY);
+
+							_this._setStatus(canvasObj_rectProcessing);
+
+							//该事件仅执行一次
+							canvas.onmousedown = null;
+						}
+						break;
+					}
+				case canvasObj_rectProcessing:
+					{
+						this.status = canvasObj_rectProcessing;
+						canvas.onmousemove = function (ev) {
+							let ox = ev.offsetX;
+							let oy = ev.offsetY;
+							let x = _this.currentShape.attr('x');
+							let y = _this.currentShape.attr('y');
+
+							_this.currentShape.attr('width', ox - x);
+							_this.currentShape.attr('height', oy - y);
+							_this._redraw();
+						}
+
+						canvas.onmouseup = canvas.onmouseout = function (ev) {
+							let curShape = _this.currentShape;
+							let x = curShape.attr('x');
+							let y = curShape.attr('y');
+							let width = curShape.attr('width');
+							let height = curShape.attr('height');
+
+							if (width < 0) {
+								curShape.attr('x', x + width);
+								curShape.attr('width', -width);
+							}
+							if (height < 0) {
+								curShape.attr('y', y + height);
+								curShape.attr('height', -height)
+							}
+
+							if (curShape.attr('width') > 5 && curShape.attr('height') > 5) {
+								_this.shapes.push(_this.currentShape);
+							}
+
+							_this.currentShape = null;
+							_this._setStatus(canvasObj_rectReady);
+
+							canvas.onmousemove = null;
+							canvas.onmouseup = null;
+							canvas.onmouseout = null;
+
+							_this._redraw();
+						}
+						break;
+					}
+
+
+				case canvasObj_cancel:
+					{
+						_this.status = canvasObj_cancel;
+						canvas.style.pointerEvents = 'none';
+						canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.3)';
+						break;
+					}
+
+
+			}
+
+		},
+		/** 重绘Canvas */
+		_redraw: function () {
+			let canvas = this.canvas;
+			let ctx = this.canvas.getContext('2d');
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			for (let shape of this.shapes) {
+
+				this._drawByType(ctx, shape)
+			}
+
+			if (this.currentShape) {
+				this._drawByType(ctx, this.currentShape)
+			}
+
+		},
+		_drawByType: function (ctx, shape) {
+			ctx.save();
+			switch (shape.type) {
+				case 'rect':
+					this._drawRect(ctx, shape);
+					break;
+			}
+			ctx.restore();
+		},
+		/** 绘制矩形 */
+		_drawRect: function (ctx, rect) {
+			let x = rect['x'];
+			let y = rect['y'];
+			let width = rect['width'];
+			let height = rect['height'];
+			let fill = rect['fill'];
+			let fillOpacity = rect['fill-opacity'] ? rect['fill-opacity'] : rect['opacity'];
+			let strokeWidth = rect['stroke-width'];
+			let stroke = rect['stroke'];
+			let strokeOpacity = rect['stroke-opacity'] ? rect['stroke-opacity'] : rect['opacity'];
+
+			// 绘制内部矩形
+			ctx.fillStyle = fill;
+			ctx.globalAlpha = fillOpacity;
+			ctx.fillRect(x, y, width, height);
+
+			// 绘制边框
+			ctx.strokeStyle = stroke;
+			ctx.globalAlpha = strokeOpacity;
+			ctx.lineWidth = strokeWidth;
+			ctx.strokeRect(x - strokeWidth / 2, y - strokeWidth / 2, width + strokeWidth, height + strokeWidth);
+		},
+		pointer: function () {
+			this._setStatus(canvasObj_pointer);
+		},
+		cancel: function () {
+			this._setStatus(canvasObj_cancel);
+		},
+		rect: function () {
+			this._setStatus(canvasObj_rectReady);
+		},
+	}
+
+
+
 	// 构造函数
 	function VisGadget(opt) {
 
 		this.view = {
-			body: null,     //插件界面
-			topBar: null,   //顶部菜单栏
-			pannel: null,   //主体
-			toolbox: null   //工具栏(按钮区域)
-		}
-		this.svgSelector = {
-
+			body: null, //插件界面
+			topBar: null, //顶部菜单栏
+			pannel: null, //主体
+			toolbox: null //工具栏(按钮区域)
 		};
-		this._initial(opt);
 
+		this.target = []
+
+		this.svgSelector = {};
+		this._initial(opt);
 	}
+
 
 
 	VisGadget.prototype = {
 		constructor: this,
 		_defaultOption: {
-			targetArr: [],
-			targetIdArr: [],
+			targetId: [],
 			view: {
-				title: 'VisGadget v0.1',        //标题
-				width: null,                    //宽度
-				height: null,                   //高度
-				rows: 4,                        //按钮行
-				columns: 3,                     //按钮列
-				button: [],                     //按钮列表
-				defaultButtonColor: '#33475F',  //默认按钮颜色
+				title: 'VisGadget v0.1', //标题
+				width: null, //宽度
+				height: null, //高度
+				rows: 4, //按钮行
+				columns: 3, //按钮列
+				button: [], //按钮列表
+				defaultButtonColor: '#33475F', //默认按钮颜色
 				defaultButton: [{
 						name: 'Pointer',
 						svgStr: '<g><g transform="translate(0.000000,511.000000) scale(0.100000,-0.100000)"><path d="M101.7,4985.9c8.4-19.6,649.3-2225,1427.3-4900.5C2307.1-2593,2945.2-4787.2,2950.8-4790c2.8-5.6,433.8,1130.7,954.4,2518.8l948.8,2527.3l2527.2,948.8c1388.2,520.6,2524.5,951.6,2518.8,954.4c-2.8,5.6-2197,643.7-4875.3,1421.7c-2675.6,778-4881,1418.9-4900.6,1427.3C104.5,5013.9,96.1,5005.5,101.7,4985.9z" /></g></g>',
 						class: null,
-						onclick: null
+						onclick: 'onClickPointer',
+						callback: null
 					}, {
 						name: 'Rect',
 						svgStr: '<g><path d="M908.3,859.3H91.7c-45.1,0-81.7-36.6-81.7-81.7V222.3c0-45.1,36.6-81.7,81.7-81.7h816.7c45.1,0,81.7,36.6,81.7,81.7v555.3C990,822.8,953.4,859.3,908.3,859.3z M892,255c0-12.3-5.5-16.3-16.3-16.3H124.3c-12.3,0-16.3,4.1-16.3,16.3v490c0,13.7,2.7,16.3,16.3,16.3h751.3c13.7,0,16.3-4.1,16.3-16.3V255z"/></g>',
 						class: null,
-						onclick: null,
+						onclick: 'onClickRect',
 
 					},
 					{
@@ -120,7 +389,8 @@
 						name: 'Cancel',
 						svgStr: '<g><path d="M670.5,500l283.8-283.8c47.6-47.6,47.4-123.7,0.3-170.8C907.2-2,831.1-1.6,783.8,45.7L500,329.5L216.2,45.7C168.9-1.6,92.8-2,45.4,45.4C-1.7,92.4-2,168.5,45.7,216.2L329.5,500L45.7,783.8C-2,831.5-1.7,907.6,45.4,954.6c47.4,47.4,123.5,46.9,170.8-0.3L500,670.5l283.8,283.8c47.2,47.2,123.4,47.7,170.8,0.3c47.1-47.1,47.3-123.2-0.3-170.8L670.5,500z"/></g>',
 						class: null,
-						onclick: null,
+						onclick: 'onClickCancel',
+						callback: null
 
 					}
 				],
@@ -143,10 +413,14 @@
 			_opt.targetId = Array.from(new Set(_opt.targetId));
 
 			// 获取目标svg集合
-			_opt.targetIdArr.forEach(v => {
+			_opt.targetId.forEach(v => {
 				let t = document.getElementById(v);
+
 				if (!!t) {
-					_opt.targetArr.push(t);
+					this.target.push({
+						svgDom: t,
+						canvasObject: new CanvasObject(t)
+					})
 				}
 			});
 
@@ -156,9 +430,19 @@
 			}
 		},
 		createView: function () {
+
 			let viewOption = this.options.view;
-			let targetRect = this.options.targetArr[0].getBoundingClientRect();
-           
+			let targetRect = this.target[0].svgDom.getBoundingClientRect();
+
+			// 尺寸适配
+			if (!viewOption.height) {
+				viewOption.height = targetRect.height;
+			}
+
+			if (!viewOption.width) {
+				viewOption.width = viewOption.height * (3 / 7);
+			}
+
 			this.view.body = document.createElement('div'); // 初始化 插件界面
 			this.view.topBar = document.createElement('div'); // 初始化 插件顶部菜单按
 			this.view.pannel = document.createElement('div'); // 初始化 插件主体
@@ -169,21 +453,13 @@
 			let pannel = this.view.pannel;
 			let toolbox = this.view.toolbox;
 
-			// 尺寸适配
-			if (!viewOption.height) {
-				viewOption.height = targetRect.height;
-			}
-
-			if (!viewOption.width) {
-				viewOption.width = viewOption.height * (3 / 7);
-			}
-			/*************************** 样式 *************************/
+			/*************************** 基础样式 *************************/
 
 			// body
 			body.id = 'visgadget';
 			body.style.width = viewOption.width + 'px';
 			body.style.height = viewOption.height + 'px';
-			body.style.top = targetRect.top + 'px';
+			body.style.top = targetRect.top + getScrollTop() + 'px';
 			body.style.left = targetRect.left + targetRect.width + 'px';
 			document.body.appendChild(body);
 
@@ -196,7 +472,6 @@
 			topBar.appendChild(arrow);
 			body.appendChild(topBar);
 
-
 			// pannel
 			pannel.className = 'vd_pannel';
 			body.appendChild(pannel);
@@ -207,9 +482,6 @@
 
 			// 默认按钮
 			this.addDefaultButton();
-
-
-
 
 			/*************************** 设置view事件 *************************/
 			// 隐藏工具栏
@@ -257,9 +529,13 @@
 
 
 		},
+		resize: function () {
+
+		},
 		addDefaultButton: function () {
 
 			let toolbox = this.view.toolbox;
+			let _this = this;
 			for (let buttonOption of this.options.view.defaultButton) {
 				let button = document.createElement('div');
 				let _btnWidth = (toolbox.offsetWidth - ((this.options.view.columns - 1) * 2 + 2) * 5) / this.options.view.columns + 'px';
@@ -278,20 +554,26 @@
 				button.appendChild(p);
 
 
+
 				//添加class
 				if (buttonOption.class) {
 					button.className += ' ' + buttonOption.class;
 				}
 
-				//添加鼠标事件
+				// 解析按钮的点击事件
+				let fn = eval('_this.' + buttonOption.onclick);
+
+				// 添加事件
 				if (buttonOption.onclick) {
-					button.onclick = buttonOption.onclick;
+					button.onclick = function (ev) {
+						fn(ev, _this, buttonOption.callback);
+					};
 				}
 
 				toolbox.appendChild(button);
 
 			}
-           
+
 
 		},
 		addButton: function (btnOption) {
@@ -332,35 +614,67 @@
 
 
 
-            toolbox.appendChild(button);
-        },
-        onlyUseButtons:function(nameArr){
-            let defaultButton = this.options.view.defaultButton;
-            
-            for(let i = 0;i<defaultButton.length;i++){
-                let btn = defaultButton[i];
-                if(nameArr.indexOf(btn.name) <= -1){
-                    defaultButton.splice(i,1);
-                    i--;
-                }
-            }
-        },
-		unUseButtons:function(nameArr){
-            let defaultButton = this.options.view.defaultButton;
-        
-            for(let i = 0;i<defaultButton.length;i++){
-                let btn = defaultButton[i];
-                if(nameArr.indexOf(btn.name)>-1){
-                    defaultButton.splice(i,1);
-                    i--;
-                }
-            }
+			toolbox.appendChild(button);
+		},
+		onlyUseButtons: function (nameArr) {
+			let defaultButton = this.options.view.defaultButton;
+
+			for (let i = 0; i < defaultButton.length; i++) {
+				let btn = defaultButton[i];
+				if (nameArr.indexOf(btn.name) <= -1) {
+					defaultButton.splice(i, 1);
+					i--;
+				}
+			}
+		},
+		unUseButtons: function (nameArr) {
+			let defaultButton = this.options.view.defaultButton;
+
+			for (let i = 0; i < defaultButton.length; i++) {
+				let btn = defaultButton[i];
+				if (nameArr.indexOf(btn.name) > -1) {
+					defaultButton.splice(i, 1);
+					i--;
+				}
+			}
+		},
+		// 点击指针，则激活CanvasObject
+		onClickPointer: function (ev, visgadget, callback) {
+
+			visgadget.target.forEach(function (v, i) {
+				v.canvasObject.pointer();
+			})
+
+			if (callback) {
+				callback();
+			}
+
+		},
+		onClickRect: function (ev, visgadget, callback) {
+			visgadget.target.forEach(function (v, i) {
+				v.canvasObject.rect();
+			})
+
+			if (callback) {
+				callback();
+			}
+		},
+		// 点击叉叉，则取消激活CanvasObject
+		onClickCancel: function (ev, visgadget, callback) {
+
+			visgadget.target.forEach(function (v, i) {
+				v.canvasObject.cancel();
+			})
+
+			if (callback) {
+				callback();
+			}
 		}
 
 	}
 
 
-	// 对象拷贝
+	/** 对象拷深贝 */
 	function clone(obj) {
 		if (obj === null) return null
 		if (typeof obj !== 'object') return obj;
@@ -376,7 +690,7 @@
 		return newObj;
 	};
 
-	// 对象合并
+	/** 对象合并 */
 	function extend(o, n, override) {
 		for (let key in n) {
 			if (n.hasOwnProperty(key) && (!o.hasOwnProperty(key) || override)) {
@@ -408,7 +722,7 @@
 		}
 	}
 
-	// 边缘停靠
+	/** 边缘停靠 */
 	function viewDock(x, y, myRect, rects) {
 		let tx = x,
 			ty = y;
@@ -435,6 +749,7 @@
 		return [tx, ty];
 	}
 
+	/** 字符串解析SVG元素 */
 	function parseSVG(str, color) {
 
 		let div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
@@ -456,11 +771,24 @@
 		return svgDom;
 	}
 
+	/** 获取滚动轴高度 */
+	function getScrollTop() {
+		var scroll_top = 0;
+		if (document.documentElement && document.documentElement.scrollTop) {
+			scroll_top = document.documentElement.scrollTop;
+		} else if (document.body) {
+			scroll_top = document.body.scrollTop;
+		}
+		return scroll_top;
+	}
+
+
 
 	// 将插件对象暴露给全局对象
 	_global = (function () {
 		return this || (0, eval)('this');
 	}());
+	
 	if (typeof module !== "undefined" && module.exports) {
 		module.exports = VisGadget;
 	} else if (typeof define === "function" && define.amd) {
