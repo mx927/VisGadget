@@ -38,7 +38,6 @@ class CanvasObject {
     }
 
     _getInclusion() {
-
         // let all = this.goal.getElementsByTagName('circle');
         
         // for (let circle of all) {
@@ -55,7 +54,6 @@ class CanvasObject {
      * 重绘所有图形
      */
     _redraw() {
-
         let canvas = this.canvas;
         let ctx = this.canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -75,7 +73,6 @@ class CanvasObject {
      * @param  {ShapeObject} shape
      */
     _drawByType(ctx, shape) {
-
         ctx.save();
         switch (shape.attr('type')) {
             case 'rect':
@@ -98,7 +95,6 @@ class CanvasObject {
      * @param {ShapeObject} rect
      */
     _drawRect(ctx, shape) {
-
         let x = shape.attr('x');
         let y = shape.attr('y');
         let width = parseFloat(shape.attr('width'));
@@ -125,7 +121,6 @@ class CanvasObject {
     }
 
     _drawCircle(context, shape) {
-
         context.save();
         let cx = parseFloat(shape.attr('cx'));
         let cy = parseFloat(shape.attr('cy'));
@@ -148,8 +143,6 @@ class CanvasObject {
             }
 
         }
-
-
 
         context.beginPath();
         context.arc(cx, cy, r, 0, 2 * Math.PI, false);
@@ -292,7 +285,6 @@ class CanvasObject {
 
     }
 
-
     /**
      * 状态切换为 ellipseReady
      */
@@ -373,14 +365,11 @@ class CanvasObject {
             //_this.currentCallBack(inclusion);
         }
 
-
         _this.currentShape = null;
         _this._redraw();
 
         console.log((new Date().getTime()) - t)
         restart.call(this);
-
-
     }
 
     /**
