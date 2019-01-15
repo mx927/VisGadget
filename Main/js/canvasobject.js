@@ -33,6 +33,15 @@ class CanvasObject {
         }
 
         document.body.appendChild(canvas);
+
+
+
+        
+
+        this.shapes.push(new ShapeObject(document.getElementById('myRect')))
+
+        this._redraw();
+
     }
     /**
      * 重绘所有图形
@@ -61,7 +70,12 @@ class CanvasObject {
         switch (shape.attr('type')) {
             case 'rect':
                 this._drawRect(ctx, shape);
-
+                break;
+            case 'circle':
+                this._drawCircle(ctx,shape);
+                break;
+            case 'ellipse':
+                this._drawEllipse(ctx, shape);
                 break;
         }
         ctx.restore();
@@ -74,26 +88,98 @@ class CanvasObject {
      * @param {ShapeObject} rect
      */
     _drawRect(ctx, rect) {
-        let x = rect.attr('x');
-        let y = rect.attr('y');
-        let width = rect.attr('width');
-        let height = rect.attr('height');
-        let fill = rect.attr('fill');
-        let fillOpacity = rect.attr('fill-opacity') ? rect.attr('fill-opacity') : rect.attr('opacity');
-        let strokeWidth = rect.attr('stroke-width');
-        let stroke = rect.attr('stroke');
-        let strokeOpacity = rect.attr('stroke-opacity') ? rect.attr('stroke-opacity') : rect.attr('opacity');
+        let x = shape.attr('x');
+        let y = shape.attr('y');
+        let width = parseFloat(shape.attr('width'));
+        let height = parseFloat(shape.attr('height'));
+        let fill = shape.attr('fill');
+        let fillOpacity = shape.attr('fill-opacity') ? shape.attr('fill-opacity') : shape.attr('opacity');
+        fillOpacity = parseFloat(fillOpacity);
+        let strokeWidth = parseFloat(shape.attr('stroke-width'));
+        let stroke = shape.attr('stroke');
+        let strokeOpacity = shape.attr('stroke-opacity') ? shape.attr('stroke-opacity') : shape.attr('opacity');
+        strokeOpacity = parseFloat(strokeOpacity);
+
 
         // 绘制内部矩形
         ctx.fillStyle = fill;
         ctx.globalAlpha = fillOpacity;
-        ctx.fillRect(x, y, width, height);
+        ctx.fillshape(x, y, width, height);
 
         // 绘制边框
         ctx.strokeStyle = stroke;
         ctx.globalAlpha = strokeOpacity;
         ctx.lineWidth = strokeWidth;
-        ctx.strokeRect(x - strokeWidth / 2, y - strokeWidth / 2, width + strokeWidth, height + strokeWidth);
+
+        ctx.strokeshape(x - strokeWidth / 2, y - strokeWidth / 2, width + strokeWidth, height + strokeWidth);
+    }
+
+    _drawCircle(context,shape){
+        context.save();
+        let cx = parseFloat(shape.attr('cx'));
+        let cy = parseFloat(shape.attr('cy'));
+        let r = parseFloat(shape.attr('r'));
+        
+        let fill = shape.attr('fill');
+        let fillOpacity = shape.attr('fill-opacity') ? shape.attr('fill-opacity') : shape.attr('opacity');
+        fillOpacity = parseFloat(fillOpacity);
+        let strokeWidth = shape.attr('stroke-width');
+        let stroke = shape.attr('stroke');
+        let strokeOpacity = shape.attr('stroke-opacity') ? shape.attr('stroke-opacity') : shape.attr('opacity');
+        strokeOpacity = parseFloat(strokeOpacity);
+
+        context.beginPath();
+        context.arc(cx, cy, r, 0, 2 * Math.PI, false);
+        context.fillStyle = fill;
+        context.globalAlpha = fillOpacity;
+        context.fill();
+
+        if(strokeWidth){
+            context.strokeStyle = stroke;
+            context.lineWidth = strokeWidth;
+            context.globalAlpha = strokeOpacity;
+            context.stroke();
+        }
+        context.restore();
+    }
+
+    _drawEllipse(context, shape) {
+        let cx = parseFloat(shape.attr('cx'));
+        let cy = parseFloat(shape.attr('cy'));
+        let rx = parseFloat(shape.attr('rx'));
+        let ry = parseFloat(shape.attr('ry'));
+
+        let fill = shape.attr('fill');
+        let fillOpacity = shape.attr('fill-opacity') ? shape.attr('fill-opacity') : shape.attr('opacity');
+        fillOpacity = parseFloat(fillOpacity);
+        let strokeWidth = shape.attr('stroke-width');
+        let stroke = shape.attr('stroke');
+        let strokeOpacity = shape.attr('stroke-opacity') ? shape.attr('stroke-opacity') : shape.attr('opacity');
+        strokeOpacity = parseFloat(strokeOpacity);
+
+        context.save();
+        var r = (rx > ry) ? rx : ry;
+        var ratioX = rx / r; 
+        var ratioY = ry / r; 
+        context.scale(ratioX, ratioY);
+        context.beginPath();
+        context.moveTo((cx + rx) / ratioX, cy / ratioY);
+        context.arc(cx / ratioX, cy / ratioY, r, 0, 2 * Math.PI);
+        context.closePath();
+        context.restore();
+
+        context.save();
+        context.fillStyle = fill;
+        context.globalAlpha = fillOpacity;
+        context.fill();
+
+        if(strokeWidth){
+            context.strokeStyle = stroke;
+            context.lineWidth = strokeWidth;
+            context.globalAlpha = strokeOpacity;
+            context.stroke();
+        }
+        context.restore();
     }
 
     /**
@@ -114,11 +200,9 @@ class CanvasObject {
     _turnRectReady() {
         let _this = this;
         let canvas = _this.canvas;
-
+        _this.status = CanvasObject.defaults.status.rectReady;
         canvas.style.pointerEvents = 'auto';
         canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.5)';
-
-        _this.status = CanvasObject.defaults.status.rectReady;
 
         canvas.onmousedown = function (ev) {
             _this.currentShape = new ShapeObject('rect');
@@ -143,7 +227,6 @@ class CanvasObject {
     _turnRectProcessing() {
         let _this = this;
         let canvas = _this.canvas;
-
         _this.status = CanvasObject.defaults.status.rectProcessing;
 
         canvas.onmousemove = function (ev) {
@@ -192,6 +275,75 @@ class CanvasObject {
     }
 
     /**
+     * 状态切换为 ellipseReady
+     */
+    _turnEllipseReady() {
+        let _this = this;
+        let canvas = _this.canvas;
+        _this.status = CanvasObject.defaults.status.ellipseReady;
+        canvas.style.pointerEvents = 'auto';
+        canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.5)';
+
+        canvas.onmousedown = function (ev) {
+            _this.currentShape = new ShapeObject('ellipse');
+
+            _this.currentShape
+                .attr('x', ev.offsetX)
+                .attr('y', ev.offsetY);
+
+            // 该事件仅执行一次
+            canvas.onmousedown = null;
+
+            _this._turnEllipseProcessing();
+        }
+    }
+
+    /**
+     * 状态切换为 ellipseProcessing
+     */
+    _turnEllipseProcessing() {
+        let _this = this;
+        let canvas = _this.canvas;
+        _this.status = CanvasObject.defaults.status.rectProcessing;
+
+        canvas.onmousemove = function (ev) {
+
+            let ox = ev.offsetX;
+            let oy = ev.offsetY;
+            let bx = _this.currentShape.attr('bx');
+            let by = _this.currentShape.attr('by');
+            _this.currentShape.attr('ex', ox)
+                .attr('ey', oy)
+                .confirm();
+            _this._redraw();
+        }
+
+        canvas.onmouseup = canvas.onmouseout = function (ev) {
+            let curShape = _this.currentShape;
+
+
+            let rx = curShape.attr('rx');
+            let ry = curShape.attr('ry');
+
+
+            if (rx > 5 && ry > 5) {
+                _this.shapes.push(_this.currentShape);
+            }
+
+            _this.currentShape = null;
+
+
+            canvas.onmousemove = null;
+            canvas.onmouseup = null;
+            canvas.onmouseout = null;
+
+            _this._redraw();
+
+            _this._turnEllipseReady(CanvasObject.defaults.status.rectReady);
+        }
+    }
+
+    /**
      * 状态切换为 cancel
      */
     _turnCancel() {
@@ -232,6 +384,13 @@ class CanvasObject {
         this._turnRectReady();
     }
 
+    /**
+     * 执行ellipse
+     */
+    ellipse() {
+        this._turnEllipseReady();
+    }
+
     /** 获取滚动轴高度 */
     static getScrollTop() {
         let scroll_top = 0;
@@ -248,8 +407,10 @@ class CanvasObject {
 CanvasObject.defaults = {
     status: {
         pointer: 'pointer', // 指针， 可操作CanvasObject内部元素
-        rectReady: 'rectReady', // 矩形， 准备绘制矩形
-        rectProcessing: 'rectProssing', // 矩形， 正在根据用户操作绘制矩形
+        rectReady: 'rectReady', // 矩形， 准备阶段
+        rectProcessing: 'rectProssing', // 矩形， 绘制阶段
+        ellipseReady: 'ellipseReady', //椭圆 准备阶段
+        ellipsProcessing: 'ellipseProcessing', //椭圆，绘制阶段
         cancel: 'cancel', // 不激活，鼠标事件会穿透canvas元素
     }
 }

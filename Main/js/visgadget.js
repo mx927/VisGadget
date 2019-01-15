@@ -429,7 +429,15 @@
 					name: 'Ellipse',
 					svgStr: '<g><path d="M500,832.3c235.6,0,427.3-149.1,427.3-332.3c0-183.2-191.7-332.2-427.3-332.2c-235.6,0-427.2,149-427.2,332.2C72.8,683.2,264.4,832.3,500,832.3 M500,895C229.3,895,10,718.2,10,500c0-218.1,219.3-395,490-395s490,176.9,490,395C990,718.2,770.7,895,500,895L500,895L500,895z"/></g>',
 					class: null,
-					onclick: null,
+					onclick: function (ev, visgadget, callback) {
+						visgadget.target.forEach(function (v, i) {
+							v.canvasObject.ellipse();
+						})
+
+						if (callback) {
+							callback();
+						}
+					},
 
 				},
 				{
