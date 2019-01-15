@@ -34,12 +34,6 @@ class CanvasObject {
 
         document.body.appendChild(canvas);
 
-
-
-        
-
-        this.shapes.push(new ShapeObject(document.getElementById('myRect')))
-
         this._redraw();
 
     }
@@ -99,7 +93,6 @@ class CanvasObject {
         let stroke = shape.attr('stroke');
         let strokeOpacity = shape.attr('stroke-opacity') ? shape.attr('stroke-opacity') : shape.attr('opacity');
         strokeOpacity = parseFloat(strokeOpacity);
-
 
         // 绘制内部矩形
         ctx.fillStyle = fill;
