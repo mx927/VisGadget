@@ -25,7 +25,7 @@ class ShapeObject {
 
         if(type instanceof SVGElement){
             this.para = ShapeObject.clone(type);
-        
+            //console.log( this.para )
           
         }
     }
@@ -36,7 +36,7 @@ class ShapeObject {
      * @param  {String} attribute 属性名称
      */
     getDefaults(attribute){
-        return JSON.parse(JSON.stringify(ShapeObject.defaults[attribute]));
+        return JSON.parse(JSON.stringify(ShapeObject.defaults.shapeOption[attribute]));
     }
 
     
@@ -66,8 +66,6 @@ class ShapeObject {
         }
     }
 
-
-
     confirm(){
         switch(this.attr('type')){
             case 'ellipse':
@@ -91,7 +89,37 @@ class ShapeObject {
      */
     static clone(source){
         let res = {};
+        let transformX = 0;     // x偏移量
+        let transformY = 0;     // y偏移量
+        let sourceStyle = window.getComputedStyle(source, "");
         res.type = source.tagName;
+
+        switch(res.type){
+            case 'circle':
+                res['cx'] = 0;
+                res['cy'] = 0;
+                break;
+        }
+ 
+        //获取 attribute 属性
+        for(let attribute of source.attributes){
+            res[attribute.name] = attribute.value;
+        }
+   
+        for(let attribute of ShapeObject.defaults.cloneShapeOption.normal){
+            
+            res[attribute] = sourceStyle[attribute]
+     
+        }
+        
+        if(!res['opacity'])
+            res['opacity'] = 1;
+
+       
+        return res;
+    }
+    static getAttribute(source){
+        let res = {};
         for(let attribute of source.style){
             res[attribute] = source.style[attribute];
         }
@@ -99,57 +127,65 @@ class ShapeObject {
         for(let attribute of source.attributes){
             res[attribute.name] = attribute.value;
         }
-
-        if(!res['opacity'])
-            res['opacity'] = 1;
         return res;
+    }
+
+    static getTransform(transform){
+
+        let arr = transform.split('(')[1].split(')')[0].split(',');
+        return {transformX:parseFloat(arr[0]),transformY:parseFloat(arr[1])}
     }
 
 }
 
 ShapeObject.defaults = {
-    rect: {
-        'type': 'rect',
-        "x": 0, // x坐标
-        "y": 0, // y坐标
-        "rx": 0, // x圆角值
-        "ry": 0, // y圆角值
-        "width": 1, // 宽度
-        "height": 1, // 高度
-        "fill": 'steelblue', // 矩形颜色
-        "fill-opacity": 0.5, // 矩形透明度
-        "stroke": 'black', // 边框颜色
-        "stroke-width": 0.5, // 边框宽度
-        "stroke-opacity": 1, // 边框透明度
-        "opacity": 1 // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
+    shapeOption:{
+        rect: {
+            'type': 'rect',
+            "x": 0, // x坐标
+            "y": 0, // y坐标
+            "rx": 0, // x圆角值
+            "ry": 0, // y圆角值
+            "width": 1, // 宽度
+            "height": 1, // 高度
+            "fill": 'steelblue', // 矩形颜色
+            "fill-opacity": 0.5, // 矩形透明度
+            "stroke": 'black', // 边框颜色
+            "stroke-width": 0.5, // 边框宽度
+            "stroke-opacity": 1, // 边框透明度
+            "opacity": 1 // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
+        },
+        circle: {
+            'type': 'circle',
+            "cx": 50, // 圆心x坐标
+            "cy": 50, // 圆心y坐标
+            "r": 50, // 半径
+            "fill": 'steelblue', // 颜色
+            "fill-opacity": 0.5, // 透明度
+            "stroke": 'black', // 边框颜色
+            "stroke-width": 0.5, // 边框宽度
+            "stroke-opacity": 1, // 边框透明度
+            "opacity": 1 // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
+        },
+        ellipse: {
+            'type': 'ellipse',
+            "x": 0,//外接矩形左上角 x坐标
+            "y":0, //外接矩形左上角 y坐标
+            "ex":0,//外接矩形右下角 x坐标
+            "ey":0,//外接矩形右下角 y坐标
+            "cx": 0, // 圆心x坐标
+            "cy": 0, // 圆心y坐标
+            "rx": 0, // x轴半径
+            "ry": 0, // y轴半径
+            "fill": 'steelblue', // 颜色
+            "fill-opacity": 0.5, // 透明度
+            "stroke": 'black', // 边框颜色
+            "stroke-width": 0.5, // 边框宽度
+            "stroke-opacity": 1, // 边框透明度
+            "opacity": 1 // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
+        }
     },
-    circle: {
-        'type': 'circle',
-        "cx": 50, // 圆心x坐标
-        "cy": 50, // 圆心y坐标
-        "r": 50, // 半径
-        "fill": 'steelblue', // 颜色
-        "fill-opacity": 0.5, // 透明度
-        "stroke": 'black', // 边框颜色
-        "stroke-width": 0.5, // 边框宽度
-        "stroke-opacity": 1, // 边框透明度
-        "opacity": 1 // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
-    },
-    ellipse: {
-        'type': 'ellipse',
-        "x": 0,//外接矩形左上角 x坐标
-        "y":0, //外接矩形左上角 y坐标
-        "ex":0,//外接矩形右下角 x坐标
-        "ey":0,//外接矩形右下角 y坐标
-        "cx": 0, // 圆心x坐标
-        "cy": 0, // 圆心y坐标
-        "rx": 0, // x轴半径
-        "ry": 0, // y轴半径
-        "fill": 'steelblue', // 颜色
-        "fill-opacity": 0.5, // 透明度
-        "stroke": 'black', // 边框颜色
-        "stroke-width": 0.5, // 边框宽度
-        "stroke-opacity": 1, // 边框透明度
-        "opacity": 1 // 整体透明度，若未选择矩形和边框的透明度， 则默认使用整体透明度
+    cloneShapeOption:{
+        normal:["x","y","cx","cy","d","rx","ry","r","width","height","transform","fill","fill-opacity","stroke","stroke-width","stroke-opacity","opacity"]
     }
 }

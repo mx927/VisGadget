@@ -10,11 +10,10 @@ class CanvasObject {
     constructor(goal) {
         this.goal = goal;
         this.canvas = document.createElement('canvas');
-
-
         this.status = CanvasObject.defaults.status.cancel;
         this.shapes = [];
         this.currentShape = null;
+        this.currentCallBack = null;
 
         let canvas = this.canvas;
         let svgRect = this.goal.getClientRects()[0];
@@ -37,15 +36,31 @@ class CanvasObject {
         this._redraw();
 
     }
+
+    _getInclusion() {
+
+        // let all = this.goal.getElementsByTagName('circle');
+        
+        // for (let circle of all) {
+        //     let shape = new ShapeObject(circle);
+        //     shape.attr('fill', 'steelblue');
+        //     this.shapes.push(shape);
+
+        // }
+       
+    }
+
+
     /**
      * 重绘所有图形
      */
     _redraw() {
+
         let canvas = this.canvas;
         let ctx = this.canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         for (let shape of this.shapes) {
+            // console.log(shape)
             this._drawByType(ctx, shape)
         }
 
@@ -60,13 +75,14 @@ class CanvasObject {
      * @param  {ShapeObject} shape
      */
     _drawByType(ctx, shape) {
+
         ctx.save();
         switch (shape.attr('type')) {
             case 'rect':
                 this._drawRect(ctx, shape);
                 break;
             case 'circle':
-                this._drawCircle(ctx,shape);
+                this._drawCircle(ctx, shape);
                 break;
             case 'ellipse':
                 this._drawEllipse(ctx, shape);
@@ -81,7 +97,8 @@ class CanvasObject {
      * @param {canvas.getContext} ctx
      * @param {ShapeObject} rect
      */
-    _drawRect(ctx, rect) {
+    _drawRect(ctx, shape) {
+
         let x = shape.attr('x');
         let y = shape.attr('y');
         let width = parseFloat(shape.attr('width'));
@@ -97,22 +114,23 @@ class CanvasObject {
         // 绘制内部矩形
         ctx.fillStyle = fill;
         ctx.globalAlpha = fillOpacity;
-        ctx.fillshape(x, y, width, height);
+        ctx.fillRect(x, y, width, height);
 
         // 绘制边框
         ctx.strokeStyle = stroke;
         ctx.globalAlpha = strokeOpacity;
         ctx.lineWidth = strokeWidth;
 
-        ctx.strokeshape(x - strokeWidth / 2, y - strokeWidth / 2, width + strokeWidth, height + strokeWidth);
+        ctx.strokeRect(x - strokeWidth / 2, y - strokeWidth / 2, width + strokeWidth, height + strokeWidth);
     }
 
-    _drawCircle(context,shape){
+    _drawCircle(context, shape) {
+
         context.save();
         let cx = parseFloat(shape.attr('cx'));
         let cy = parseFloat(shape.attr('cy'));
         let r = parseFloat(shape.attr('r'));
-        
+
         let fill = shape.attr('fill');
         let fillOpacity = shape.attr('fill-opacity') ? shape.attr('fill-opacity') : shape.attr('opacity');
         fillOpacity = parseFloat(fillOpacity);
@@ -121,13 +139,25 @@ class CanvasObject {
         let strokeOpacity = shape.attr('stroke-opacity') ? shape.attr('stroke-opacity') : shape.attr('opacity');
         strokeOpacity = parseFloat(strokeOpacity);
 
+        if (!!shape.attr('transform') && shape.attr('transform') != 'none') {
+            try {
+                let tf = shape.attr('transform').split('(')[1].split(')')[0].split(',');
+                context.transform(tf[0], tf[1], tf[2], tf[3], tf[4], tf[5], tf[6]);
+            } catch (error) {
+                console.error(error);
+            }
+
+        }
+
+
+
         context.beginPath();
         context.arc(cx, cy, r, 0, 2 * Math.PI, false);
-        context.fillStyle = fill;
+        context.fillStyle = 'steelblue';
         context.globalAlpha = fillOpacity;
         context.fill();
 
-        if(strokeWidth){
+        if (strokeWidth) {
             context.strokeStyle = stroke;
             context.lineWidth = strokeWidth;
             context.globalAlpha = strokeOpacity;
@@ -152,8 +182,8 @@ class CanvasObject {
 
         context.save();
         var r = (rx > ry) ? rx : ry;
-        var ratioX = rx / r; 
-        var ratioY = ry / r; 
+        var ratioX = rx / r;
+        var ratioY = ry / r;
         context.scale(ratioX, ratioY);
         context.beginPath();
         context.moveTo((cx + rx) / ratioX, cy / ratioY);
@@ -166,7 +196,7 @@ class CanvasObject {
         context.globalAlpha = fillOpacity;
         context.fill();
 
-        if(strokeWidth){
+        if (strokeWidth) {
             context.strokeStyle = stroke;
             context.lineWidth = strokeWidth;
             context.globalAlpha = strokeOpacity;
@@ -175,6 +205,8 @@ class CanvasObject {
         context.restore();
     }
 
+
+    /*********************************  绘图状态切换 ************************************/
     /**
      * 状态切换为 pointer
      */
@@ -209,8 +241,6 @@ class CanvasObject {
             canvas.onmousedown = null;
 
             _this._turnRectProcessing();
-
-
         }
     }
 
@@ -253,19 +283,15 @@ class CanvasObject {
                 _this.shapes.push(_this.currentShape);
             }
 
-            _this.currentShape = null;
-
-
             canvas.onmousemove = null;
             canvas.onmouseup = null;
             canvas.onmouseout = null;
 
-            _this._redraw();
-
-            _this._turnRectReady(CanvasObject.defaults.status.rectReady);
+            _this._complete(_this._turnRectReady);
         }
 
     }
+
 
     /**
      * 状态切换为 ellipseReady
@@ -337,6 +363,27 @@ class CanvasObject {
     }
 
     /**
+     * 状态切换为 rectComplete，完成绘图工作
+     */
+    _complete(restart) {
+        let t = (new Date().getTime());
+        let _this = this;
+        let inclusion = _this._getInclusion();
+        if (_this.currentCallBack) {
+            //_this.currentCallBack(inclusion);
+        }
+
+
+        _this.currentShape = null;
+        _this._redraw();
+
+        console.log((new Date().getTime()) - t)
+        restart.call(this);
+
+
+    }
+
+    /**
      * 状态切换为 cancel
      */
     _turnCancel() {
@@ -348,6 +395,7 @@ class CanvasObject {
         canvas.style.backgroundColor = 'rgba(236, 154, 154, 0.3)';
 
         _this.currentShape = null;
+        _this.currentCallBack = null;
         canvas.onmousedown = null;
         canvas.onmousemove = null;
         canvas.onmouseup = null;
@@ -355,8 +403,11 @@ class CanvasObject {
 
     }
 
+
+    /*********************************  对外提供的接口 ************************************/
+
     /**
-     * 执行 pointer
+     * 执行 pointer 操作
      */
     pointer() {
         this._turnCancel();
@@ -364,25 +415,29 @@ class CanvasObject {
     }
 
     /**
-     * 执行 cancel
+     * 执行 rect 操作
+     */
+    rect(callback) {
+        if (typeof callback == 'function')
+            this.currentCallBack = callback;
+
+        this._turnRectReady();
+    }
+
+    /**
+     * 执行ellipse 操作
+     */
+    ellipse() {
+        this._turnEllipseReady();
+    }
+
+    /**
+     * 执行 cancel 操作
      */
     cancel() {
         this._turnCancel();
     }
 
-    /**
-     * 执行 rect
-     */
-    rect() {
-        this._turnRectReady();
-    }
-
-    /**
-     * 执行ellipse
-     */
-    ellipse() {
-        this._turnEllipseReady();
-    }
 
     /** 获取滚动轴高度 */
     static getScrollTop() {

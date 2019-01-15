@@ -33,7 +33,7 @@
 
 			// id去重	
 			_opt.targetId = Array.from(new Set(_opt.targetId));
-
+			
 			// 获取目标svg集合
 			_opt.targetId.forEach(v => {
 				let t = document.getElementById(v);
@@ -406,7 +406,7 @@
 						})
 
 						if (callback) {
-							callback();
+							//callback();
 						}
 
 					},
@@ -416,14 +416,18 @@
 					svgStr: '<g><path d="M908.3,859.3H91.7c-45.1,0-81.7-36.6-81.7-81.7V222.3c0-45.1,36.6-81.7,81.7-81.7h816.7c45.1,0,81.7,36.6,81.7,81.7v555.3C990,822.8,953.4,859.3,908.3,859.3z M892,255c0-12.3-5.5-16.3-16.3-16.3H124.3c-12.3,0-16.3,4.1-16.3,16.3v490c0,13.7,2.7,16.3,16.3,16.3h751.3c13.7,0,16.3-4.1,16.3-16.3V255z"/></g>',
 					class: null,
 					onclick: function (ev, visgadget, callback) {
+						
 						visgadget.target.forEach(function (v, i) {
-							v.canvasObject.rect();
+							v.canvasObject.rect(callback);
 						})
 
 						if (callback) {
-							callback();
+							//callback();
 						}
 					},
+					callback:function(){
+						console.log('Got It !');
+					}
 				},
 				{
 					name: 'Ellipse',
@@ -517,8 +521,6 @@
 			]
 		}
 	}
-
-
 
 	// 将插件对象暴露给全局对象
 	_global = (function () {
