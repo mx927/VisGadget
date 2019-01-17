@@ -373,7 +373,6 @@ class Monitor {
         //this.monitor.getInclusion.call(this.monitor,this);
     }
 
-
     /**
      * 椭圆模式: 准备状态
      */
@@ -467,11 +466,6 @@ class Monitor {
     _ellipseMode_afterUpdate() {
         //this.monitor.getInclusion.call(this.monitor,this);
     }
-
-
-
-
-
 
     /** 获取滚动轴高度 */
     static getScrollTop() {
