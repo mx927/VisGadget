@@ -17,7 +17,7 @@
 				toolbox: null //工具栏(按钮区域)
 			};
 
-			this.target = []
+			this.monitors = []
 			this.svgSelector = {};
 
 			let def = JSON.parse(JSON.stringify(VisGadget.defaults));
@@ -31,18 +31,15 @@
 
 			let _opt = this.options;
 
-			// id去重	
+						// id去重	
 			_opt.targetId = Array.from(new Set(_opt.targetId));
-			
+
 			// 获取目标svg集合
 			_opt.targetId.forEach(v => {
 				let t = document.getElementById(v);
 
 				if (!!t) {
-					this.target.push({
-						svgDom: t,
-						canvasObject: new CanvasObject(t)
-					})
+					this.monitors.push(new Monitor(t))
 				}
 			});
 
@@ -50,6 +47,7 @@
 			if (!!_opt.view) {
 				this.createView(_opt);
 			}
+
 		}
 
 		/**
@@ -57,7 +55,7 @@
 		 */
 		createView() {
 			let viewOption = this.options.view;
-			let targetRect = this.target[0].svgDom.getBoundingClientRect();
+			let targetRect = this.monitors[0].container.getBoundingClientRect();
 
 			// 尺寸适配
 			if (!viewOption.height) {
@@ -109,6 +107,7 @@
 			this.createDefaultButton();
 
 			/*************************** 设置view事件 *************************/
+			let _this = this;
 			// 隐藏工具栏
 			topBar.onclick = function () {
 				if (arrow.className == 'fa fa-chevron-down') {
@@ -141,12 +140,12 @@
 				let tx = ev.clientX - body.dx;
 				let ty = ev.clientY - body.dy;
 				if (tx < 0 || ty < 0) return;
-				let pos = this.viewDock(tx, ty, body.getBoundingClientRect(), document.body.getBoundingClientRect());
+				let pos = _this.viewDock(tx, ty, body.getBoundingClientRect(), document.body.getBoundingClientRect());
 				body.style.left = pos[0] + 'px';
 				body.style.top = pos[1] + 'px';
 			}
 			topBar.ondragend = function (ev) {
-				let pos = this.viewDock(ev.clientX - body.dx, ev.clientY - body.dy, body.getBoundingClientRect(), document.body.getBoundingClientRect());
+				let pos = _this.viewDock(ev.clientX - body.dx, ev.clientY - body.dy, body.getBoundingClientRect(), document.body.getBoundingClientRect());
 				body.style.left = pos[0] + 'px';
 				body.style.top = pos[1] + 'px';
 			}
@@ -182,11 +181,7 @@
 					button.className += ' ' + buttonOption.class;
 				}
 
-				// // 解析按钮的点击事件
-				// let fn = eval('_this.' + buttonOption.onclick);
-
 				// 添加事件
-
 				if (buttonOption.onclick) {
 					button.onclick = function (ev) {
 						buttonOption.onclick(ev, _this, buttonOption.callback);
@@ -401,8 +396,9 @@
 					svgStr: '<g><g transform="translate(0.000000,511.000000) scale(0.100000,-0.100000)"><path d="M101.7,4985.9c8.4-19.6,649.3-2225,1427.3-4900.5C2307.1-2593,2945.2-4787.2,2950.8-4790c2.8-5.6,433.8,1130.7,954.4,2518.8l948.8,2527.3l2527.2,948.8c1388.2,520.6,2524.5,951.6,2518.8,954.4c-2.8,5.6-2197,643.7-4875.3,1421.7c-2675.6,778-4881,1418.9-4900.6,1427.3C104.5,5013.9,96.1,5005.5,101.7,4985.9z" /></g></g>',
 					class: null,
 					onclick: function (ev, visgadget, callback) {
-						visgadget.target.forEach(function (v, i) {
-							v.canvasObject.pointer();
+						console.info('clickPointer');
+						visgadget.monitors.forEach(function (monitor, i) {
+							monitor.pointerMode();
 						})
 
 						if (callback) {
@@ -416,16 +412,15 @@
 					svgStr: '<g><path d="M908.3,859.3H91.7c-45.1,0-81.7-36.6-81.7-81.7V222.3c0-45.1,36.6-81.7,81.7-81.7h816.7c45.1,0,81.7,36.6,81.7,81.7v555.3C990,822.8,953.4,859.3,908.3,859.3z M892,255c0-12.3-5.5-16.3-16.3-16.3H124.3c-12.3,0-16.3,4.1-16.3,16.3v490c0,13.7,2.7,16.3,16.3,16.3h751.3c13.7,0,16.3-4.1,16.3-16.3V255z"/></g>',
 					class: null,
 					onclick: function (ev, visgadget, callback) {
-						
-						visgadget.target.forEach(function (v, i) {
-							v.canvasObject.rect(callback);
+						visgadget.monitors.forEach(function (monitor, i) {
+							monitor.rectMode();
 						})
 
 						if (callback) {
 							//callback();
 						}
 					},
-					callback:function(){
+					callback: function () {
 						console.log('Got It !');
 					}
 				},
@@ -434,12 +429,12 @@
 					svgStr: '<g><path d="M500,832.3c235.6,0,427.3-149.1,427.3-332.3c0-183.2-191.7-332.2-427.3-332.2c-235.6,0-427.2,149-427.2,332.2C72.8,683.2,264.4,832.3,500,832.3 M500,895C229.3,895,10,718.2,10,500c0-218.1,219.3-395,490-395s490,176.9,490,395C990,718.2,770.7,895,500,895L500,895L500,895z"/></g>',
 					class: null,
 					onclick: function (ev, visgadget, callback) {
-						visgadget.target.forEach(function (v, i) {
-							v.canvasObject.ellipse();
+						visgadget.monitors.forEach(function (monitor, i) {
+							monitor.ellipseMode();
 						})
 
 						if (callback) {
-							callback();
+							//callback();
 						}
 					},
 
@@ -506,9 +501,8 @@
 					svgStr: '<g><path d="M670.5,500l283.8-283.8c47.6-47.6,47.4-123.7,0.3-170.8C907.2-2,831.1-1.6,783.8,45.7L500,329.5L216.2,45.7C168.9-1.6,92.8-2,45.4,45.4C-1.7,92.4-2,168.5,45.7,216.2L329.5,500L45.7,783.8C-2,831.5-1.7,907.6,45.4,954.6c47.4,47.4,123.5,46.9,170.8-0.3L500,670.5l283.8,283.8c47.2,47.2,123.4,47.7,170.8,0.3c47.1-47.1,47.3-123.2-0.3-170.8L670.5,500z"/></g>',
 					class: null,
 					onclick: function (ev, visgadget, callback) {
-
-						visgadget.target.forEach(function (v, i) {
-							v.canvasObject.cancel();
+						visgadget.monitors.forEach(function (monitor, i) {
+							monitor.cancel();
 						})
 
 						if (callback) {
@@ -521,6 +515,9 @@
 			]
 		}
 	}
+
+
+
 
 	// 将插件对象暴露给全局对象
 	_global = (function () {

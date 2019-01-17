@@ -142,7 +142,7 @@ link.rel = "stylesheet";
 document.head.appendChild(link);
 
 var vd = new VisGadget({
-    targetId: ['country'],//,'circular'],
+    targetId: ['country','circular'],//,'circular'],
     view: {}
 })
 
