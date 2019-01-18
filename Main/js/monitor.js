@@ -57,10 +57,6 @@ class Monitor {
 
     }
 
-    /*********************************  回调函数相关 ************************************/
-
-
-
     /*********************************  包含检测 ************************************/
     getInclusion(selector) {
 
@@ -127,7 +123,6 @@ class Monitor {
         });
 
     }
-
     /*********************************  克隆元素 ************************************/
     clone(svg) {
         let style = window.getComputedStyle(svg, "");
@@ -211,8 +206,6 @@ class Monitor {
 
         return shape;
     }
-
-
     /*********************************  画图相关 ************************************/
 
     /**
@@ -224,30 +217,24 @@ class Monitor {
 
     }
 
-    /**
-     * 执行 rect 操作
-     */
     rectSelect() {
         this.cancel();
         this._rectSelect();
     }
 
-    /**
-     * 执行 ellipse 操作
-     */
     ellipseSelect() {
         this.cancel();
         this._ellipseSelect();
     }
 
-    straightSelect() {
-        this.cancel();
-        this._straightSelect();
-    }
-
     lassoSelect() {
         this.cancel();
         this._lassoSelect();
+    }
+
+    straightSelect() {
+        this.cancel();
+        this._straightSelect();
     }
 
     polylineSelect() {
@@ -264,14 +251,10 @@ class Monitor {
         let type = this.currentSelectArea.type;
 
         this.getInclusion(this.currentSelectArea);
-
+        console.log(this.currentSelectArea);
         eval('this.' + type + '()');
     }
 
-
-    /**
-     * 执行 cancel 操作
-     */
     cancel() {
         this.container.style.pointerEvents = 'none';
         this.container.style.backgroundColor = this.backgroundColor_inactive;
@@ -295,7 +278,8 @@ class Monitor {
         }
     }
 
-
+   /*********************************  内部函数 ************************************/
+   
     _pointerSelect() {
         this.container.style.pointerEvents = 'auto';
         this.container.style.backgroundColor = this.backgroundColor_active;
