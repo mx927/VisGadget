@@ -57,7 +57,7 @@ class Monitor {
 
     }
 
-    /*********************************  包含检测 ************************************/
+    /*********************************  元素检测 ************************************/
     getInclusion(selector) {
 
         let selectCircle = this.selectAreaColor;
@@ -70,51 +70,57 @@ class Monitor {
             let cy = shape.shape.cy;
             let r = shape.shape.r;
 
-            let p1 = shape.transformCoordToGlobal(cx - r, cy);
-            let p2 = shape.transformCoordToGlobal(cx + r, cy);
-            let p3 = shape.transformCoordToGlobal(cx, cy - r);
-            let p4 = shape.transformCoordToGlobal(cx, cy + r);
+            let rect = shape.getBoundingRect();
+            [rect.x, rect.y] = shape.transformCoordToGlobal(rect.x, rect.y);
 
+            let p = [];
+            p.push(shape.transformCoordToGlobal(cx, cy));
+            p.push(shape.transformCoordToGlobal(cx - r, cy));
+            p.push(shape.transformCoordToGlobal(cx + r, cy));
+            p.push(shape.transformCoordToGlobal(cx, cy - r));
+            p.push(shape.transformCoordToGlobal(cx, cy + r));
 
-            let include = (selector.contain(p1[0], p1[1]) && selector.contain(p2[0], p2[1]) && selector.contain(p3[0], p3[1]) && selector.contain(p4[0], p4[1]));
+            let cross = false;
 
-            let cross;
-            if (include) {
+            for (let point of p) {
+                if (selector.contain(point[0], point[1])) {
+                    cross = true;
+                    break;
+                }
+            }
+
+            if (!cross && rect.intersect(selector.getBoundingRect())) {
+                if (eval('this.check_' + selector.type + '(selector,shape)')) {
+                    cross = true;
+                }
+            }
+
+            if (cross) {
                 shape.attr({
                     style: {
                         fill: selectCircle
                     }
                 });
-                // this.tasks.push({
-                //     host:circle,
-                //     parasite:shape
-                // })
                 this.zr.add(shape);
             }
         }
 
         for (let path of allPath) {
-
             let shape = this.clone(path);
-
             let rect = shape.getBoundingRect();
             let p1 = shape.transformCoordToGlobal(rect.x, rect.y);
             let p2 = shape.transformCoordToGlobal(rect.x + rect.width, rect.y + rect.height);
             if (selector.contain(p1[0], p1[1]) && selector.contain(p2[0], p2[1]) &&
                 selector.contain(p1[0], p1[1] + rect.height) && selector.contain(p1[0] + rect.width, p1[1])) {
+
                 shape.attr({
                     style: {
                         fill: selectCircle
                     }
                 });
-                // this.tasks.push({
-                //     host:circle,
-                //     parasite:shape
-                // })
                 this.zr.add(shape);
             }
         }
-
 
         selector.attr({
             style: {
@@ -123,6 +129,182 @@ class Monitor {
         });
 
     }
+
+    check_rectSelect(rect, shape) {
+
+        let x = rect.getBoundingRect().x;
+        let y = rect.getBoundingRect().y;
+        let width = rect.getBoundingRect().width;
+        let height = rect.getBoundingRect().height;
+
+        [x, y] = rect.transformCoordToGlobal(x, y);
+        [width, height] = rect.transformCoordToGlobal(width, height);
+
+        let lines = [
+            util.createLineByPoints([x, y], [x + width, y]),
+            util.createLineByPoints([x, y + height], [x + width, y + height]),
+            util.createLineByPoints([x, y], [x, y + height]),
+            util.createLineByPoints([x + width, y], [x + width, y + height])
+        ];
+
+        if (shape.type == 'circle') {
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+            let scale = shape.scale;
+            let r = shape.shape.r;
+            for (let line of lines) {
+                let d = util.calcDistanceByPointLine(cpoint, line, scale);
+
+                if (cpoint.x > line.point2[0]) {
+                    d = util.calcDistanceByPoints(cpoint, line.point2, scale);
+                }
+
+                if (cpoint.x < line.point1[0]) {
+                    d = util.calcDistanceByPoints(cpoint, line.point1, scale);
+                }
+
+                if (d <= r) {
+                    return true;
+                }
+            }
+
+        }
+        return false;
+    }
+
+    check_lassoSelect(lasso, shape) {
+  
+        let points = lasso.shape.points;
+
+        if(shape.type == 'circle'){
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+            let r= shape.shape.r;
+            let scale = shape.scale;
+            for(let point of points){
+                let d = util.calcDistanceByPoints(point,cpoint,scale);
+                if(d<=r){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+
+    check_straightSelect(straight, shape) {
+        let p1 = straight.transformCoordToGlobal([straight.shape.x1, straight.shape.y1])[0];
+        let p2 = straight.transformCoordToGlobal([straight.shape.x2, straight.shape.y2])[0];
+
+        let line1 = util.createLineByPoints(p1, p2);
+
+        if (shape.type == 'circle') {
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+
+            let r = shape.shape.r;
+
+            let d = util.calcDistanceByPointLine(cpoint, line1, shape.scale);
+
+            if (d <= r) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    check_ellipseSelect(ellipse, shape) {
+        let cx = 0,
+            cy = 0;
+        let rx = ellipse.shape.rx;
+        let ry = ellipse.shape.ry;
+        [cx, cy] = ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy);
+
+        let p = [];
+        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx - ellipse.shape.rx, ellipse.shape.cy));
+        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx + ellipse.shape.rx, ellipse.shape.cy));
+        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy + ellipse.shape.ry));
+        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy - ellipse.shape.ry));
+        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy));
+
+        if (shape.type == 'circle') {
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+            let scale = shape.scale;
+            let r = shape.shape.r;
+            let line = util.createLineByPoints([cx, cy], cpoint);
+            let a = parseFloat(rx),
+                b = parseFloat(ry),
+                c = parseFloat(cx),
+                d = parseFloat(cy),
+                B = parseFloat(line.b),
+                k = parseFloat(line.k);
+
+            //第一轮判断
+            for (let point of p) {
+                let d = util.calcDistanceByPoints(cpoint, point, shape.scale);
+
+                if (d <= r) {
+                    return true;
+                }
+            }
+
+            //第二轮判断
+            let judge = {
+                a: a * a * k * k + b * b,
+                b: -2 * b * b * c + 2 * a * a * (B - d) * k,
+                c: a * a * (B - d) * (B - d) + b * b * c * c - a * a * b * b
+            }
+
+            let derta = judge.b * judge.b - 4 * judge.a * judge.c;
+
+            if (derta >= 0) {
+                let x1 = (-judge.b + Math.sqrt(derta)) / (2 * judge.a);
+                let y1 = k * x1 + B;
+                let x2 = (-judge.b - Math.sqrt(derta)) / (2 * judge.a);
+                let y2 = k * x2 + B;
+
+                let d = Math.min(util.calcDistanceByPoints(cpoint, [x1, y1], scale), util.calcDistanceByPoints(cpoint, [x2, y2], scale));
+
+                if (Math.abs(r - d) < 2) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    check_polylineSelect(polyline, shape) {
+        let points = polyline.shape.points;
+
+        if(shape.type == 'circle'){
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+            let r= shape.shape.r;
+            let scale = shape.scale;
+            for(let point of points){
+                let d = util.calcDistanceByPoints(point,cpoint,scale);
+                if(d<=r){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    check_freeSelect(free, shape) {
+        let points = free.shape.points;
+
+        if(shape.type == 'circle'){
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+            let r= shape.shape.r;
+            let scale = shape.scale;
+            for(let point of points){
+                let d = util.calcDistanceByPoints(point,cpoint,scale);
+                if(d<=r){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     /*********************************  克隆元素 ************************************/
     clone(svg) {
         let style = window.getComputedStyle(svg, "");
@@ -130,6 +312,7 @@ class Monitor {
         switch (svg.tagName) {
             case 'circle':
                 shape = new Monitor.zrender.Circle({
+                    type: 'circle',
                     shape: {
                         cx: parseFloat(style.cx),
                         cy: parseFloat(style.cy),
@@ -144,12 +327,9 @@ class Monitor {
                 })
                 break;
             case 'path':
-
                 let pathStr = style.d.split('(')[1].split(')')[0];
-
-
-
                 shape = Monitor.zrender.path.createFromString(pathStr, {
+                    type: 'path',
                     style: {
                         x: 100,
                         y: 100,
@@ -163,12 +343,6 @@ class Monitor {
                     draggable: true
                 });
 
-                // shape = Monitor.zrender.path.createFromString(pathStr);
-                // shape.attr({
-                //     style:{
-                //         fill:'red'
-                //     }
-                // })
 
                 break;
         }
@@ -251,7 +425,7 @@ class Monitor {
         let type = this.currentSelectArea.type;
 
         this.getInclusion(this.currentSelectArea);
-        console.log(this.currentSelectArea);
+
         eval('this.' + type + '()');
     }
 
@@ -278,8 +452,8 @@ class Monitor {
         }
     }
 
-   /*********************************  内部函数 ************************************/
-   
+    /*********************************  内部函数 ************************************/
+
     _pointerSelect() {
         this.container.style.pointerEvents = 'auto';
         this.container.style.backgroundColor = this.backgroundColor_active;
@@ -392,13 +566,13 @@ class Monitor {
             this.container.onmousedown = null;
 
             this.container.onmousemove = (ev) => {
-                if(this.currentSelectArea){
+                if (this.currentSelectArea) {
                     let sp = this.currentSelectArea.shape;
                     sp.rx = Math.abs((ev.offsetX - sp.ox) / 2);
                     sp.ry = Math.abs((ev.offsetY - sp.oy) / 2);
                     sp.cx = (ev.offsetX + sp.ox) / 2;
                     sp.cy = (ev.offsetY + sp.oy) / 2;
-        
+
                     this.currentSelectArea.attr({
                         shape: {
                             cx: sp.cx,
@@ -412,7 +586,7 @@ class Monitor {
 
             setTimeout(() => {
                 this.container.onmouseup = this.container.onmouseout = (ev) => {
-                    if(this.currentSelectArea){
+                    if (this.currentSelectArea) {
                         this.selectComplete();
                     }
                 }
@@ -425,7 +599,7 @@ class Monitor {
         this.container.style.pointerEvents = 'auto';
         this.container.style.backgroundColor = this.backgroundColor_active;
 
-     
+
         this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Polygon({
                 type: 'lassoSelect',
@@ -457,9 +631,9 @@ class Monitor {
                     }
                 });
             }
-    
+
             setTimeout(() => {
-                this.container.onmouseup = this.container.onmouseout =  (ev) => {
+                this.container.onmouseup = this.container.onmouseout = (ev) => {
                     if (this.currentSelectArea) {
                         let points = this.currentSelectArea.shape.points;
                         points = points.slice(0, points.length - 1);
@@ -470,7 +644,7 @@ class Monitor {
                                 points: points
                             }
                         });
-    
+
                         this.selectComplete();
                     }
                 }
@@ -483,7 +657,7 @@ class Monitor {
         this.container.style.pointerEvents = 'auto';
         this.container.style.backgroundColor = this.backgroundColor_active;
 
-        this.container.onmousedown =  (ev) => {
+        this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Line({
                 type: 'straightSelect',
                 zlevel: this.selectAreaZLevel,
@@ -505,7 +679,7 @@ class Monitor {
             this.container.onmousedown = null;
 
             this.container.onmousemove = (ev) => {
-                if(this.currentSelectArea){
+                if (this.currentSelectArea) {
                     this.currentSelectArea.attr({
                         shape: {
                             x2: parseFloat(ev.offsetX),
@@ -516,7 +690,7 @@ class Monitor {
             }
 
             setTimeout(() => {
-                if(this.currentSelectArea){
+                if (this.currentSelectArea) {
                     this.container.onmouseup = this.container.onmouseout = (ev) => {
                         this.currentSelectArea.attr({
                             shape: {
@@ -612,27 +786,29 @@ class Monitor {
             });
 
             this.zr.add(this.currentSelectArea);
-        }
 
-        this.container.onmousemove = (ev) => {
-            if (this.currentSelectArea) {
-                let points = this.currentSelectArea.shape.points
-                points.push([ev.offsetX, ev.offsetY]);
-                this.currentSelectArea.attr({
-                    shape: {
-                        points: points
-                    }
-                })
-            }
-        }
+            this.container.onmousedown = null;
 
-        setTimeout(() => {
-            this.container.onmouseup = this.container.onmouseout = (ev) => {
+            this.container.onmousemove = (ev) => {
                 if (this.currentSelectArea) {
-                    this.selectComplete();
+                    let points = this.currentSelectArea.shape.points
+                    points.push([ev.offsetX, ev.offsetY]);
+                    this.currentSelectArea.attr({
+                        shape: {
+                            points: points
+                        }
+                    })
                 }
             }
-        }, 100);
+
+            setTimeout(() => {
+                this.container.onmouseup = this.container.onmouseout = (ev) => {
+                    if (this.currentSelectArea) {
+                        this.selectComplete();
+                    }
+                }
+            }, 100);
+        }
     }
 
 
