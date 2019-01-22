@@ -158,14 +158,26 @@
 
 			let toolbox = this.view.toolbox;
 			let _this = this;
-			//for (let buttonOption of this.options.view.defaultButton) {
-			for (let buttonOption of VisGadget.defaults.view.defaultButton) {
+
+			let columns = this.options.view.columns;
+			let rows = this.options.view.rows;
+
+			let vertical_padding = toolbox.offsetWidth *0.03;
+			let horizontal_padding = toolbox.offsetHeight *0.03;
+
+			let btnWidth = (toolbox.offsetWidth - columns  * vertical_padding) /columns;
+			let btnHeight = (toolbox.offsetHeight - rows * horizontal_padding) /rows;
+		
+			for (let i in VisGadget.defaults.view.defaultButton) {
+				let buttonOption =   VisGadget.defaults.view.defaultButton[i];
 				let button = document.createElement('div');
-				let _btnWidth = (toolbox.offsetWidth - ((this.options.view.columns - 1) * 2 + 2) * 5) / this.options.view.columns + 'px';
-				let _btnHeight = (toolbox.offsetHeight - ((this.options.view.rows - 1) * 2 + 2) * 5) / this.options.view.rows + 'px';
+
 				button.className = 'vd_toolbtn';
-				button.style.width = _btnWidth;
-				button.style.height = _btnHeight;
+				button.style.left =vertical_padding*0.5 +  (i%columns)*(btnWidth + vertical_padding) + 'px';
+				button.style.top = horizontal_padding*0.5 + parseInt(i/columns)*(btnHeight + horizontal_padding) + 'px';
+				
+				button.style.width = btnWidth + 'px';
+				button.style.height = btnHeight + 'px';
 
 				//添加SVG元素
 				let svgDom = VisGadget.ParseSVG(buttonOption.svgStr, this.options.view.defaultButtonColor);
@@ -174,8 +186,8 @@
 				//添加文本信息
 				let p = document.createElement('p');
 				p.innerHTML = buttonOption.name;
-				button.appendChild(p);
-
+				button.appendChild(p); 
+				
 				//添加class
 				if (buttonOption.class) {
 					button.className += ' ' + buttonOption.class;
@@ -548,8 +560,6 @@
 			]
 		}
 	}
-
-
 
 
 	// 将插件对象暴露给全局对象

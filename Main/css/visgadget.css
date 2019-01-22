@@ -65,10 +65,8 @@
 }
 
 .vd_toolbtn{
-    position: relative;
-    float: left;
+    position: absolute;
     background: rgb(221, 228, 210); 
-    margin: 5px;
     border-radius: 9px;
  
 }
@@ -83,6 +81,7 @@
     bottom:0;
     border: 0;
     width: 100%;
+    font-size: 85%;
     text-align: center;
 
 
