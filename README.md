@@ -11,7 +11,7 @@
 ### **构造函数:**
 **`var vd = new VisGadget(options);`**   
 例如：
-```Javascript
+``` js
 var vd = new VisGadget({
                 targetIdArr:['svg1','svg2'],
                 view:{width:300},

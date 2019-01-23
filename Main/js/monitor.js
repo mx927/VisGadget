@@ -28,7 +28,8 @@ class Monitor {
         this.selectAreaColor = 'steelblue';
         this.selectAreaOpacity = 0.5;
         this.selectAreaLineWidth = 3;
-        this.selectAreaZLevel = 1;
+        this.selectAreaZLevel = 2;
+        this.previewZLevel = 1;
 
         // 设置容器大小
         this.container.className = 'VisGadget_Monitor';
@@ -64,23 +65,25 @@ class Monitor {
         let allCircle = this.goal.getElementsByTagName('circle');
         let allPath = this.goal.getElementsByTagName('path');
 
-        for (let circle of allCircle) {
+        for (let circle of allCircle) { 
             let shape = this.clone(circle);
             let cx = shape.shape.cx;
             let cy = shape.shape.cy;
             let r = shape.shape.r;
-
             let rect = shape.getBoundingRect();
             [rect.x, rect.y] = shape.transformCoordToGlobal(rect.x, rect.y);
+            let cross = false;
 
+            if(!rect.intersect(selector.getBoundingRect())){
+                continue;
+            }
+            
             let p = [];
             p.push(shape.transformCoordToGlobal(cx, cy));
             p.push(shape.transformCoordToGlobal(cx - r, cy));
             p.push(shape.transformCoordToGlobal(cx + r, cy));
             p.push(shape.transformCoordToGlobal(cx, cy - r));
             p.push(shape.transformCoordToGlobal(cx, cy + r));
-
-            let cross = false;
 
             for (let point of p) {
                 if (selector.contain(point[0], point[1])) {
@@ -89,7 +92,7 @@ class Monitor {
                 }
             }
 
-            if (!cross && rect.intersect(selector.getBoundingRect())) {
+            if (!cross ) {
                 if (eval('this.check_' + selector.type + '(selector,shape)')) {
                     cross = true;
                 }
@@ -107,7 +110,14 @@ class Monitor {
 
         for (let path of allPath) {
             let shape = this.clone(path);
-            let rect = shape.getBoundingRect();
+            let rect = this.getTrueRect(shape);
+
+
+            if(!rect.intersect(selector.getBoundingRect())){
+                continue;
+            }
+
+
             let p1 = shape.transformCoordToGlobal(rect.x, rect.y);
             let p2 = shape.transformCoordToGlobal(rect.x + rect.width, rect.y + rect.height);
             if (selector.contain(p1[0], p1[1]) && selector.contain(p2[0], p2[1]) &&
@@ -128,6 +138,24 @@ class Monitor {
             }
         });
 
+    }
+    getTrueRect(shape){
+        let rect = shape.getBoundingRect();
+        [rect.x, rect.y] = shape.transformCoordToGlobal(rect.x, rect.y);
+        return rect;
+    }
+
+
+    getVertex(shape){
+        let rect = this.getTrueRect(shape);
+        let vertex = [];
+
+        vertex.push([rect.x,rect.y]);
+        vertex.push([rect.x + rect.width,rect.y]);
+        vertex.push([rect.x,rect.y + rect.height]);
+        vertex.push([rect.x + rect.width,rect.y + rect.height]);
+
+        return vertex;
     }
 
     check_rectSelect(rect, shape) {
