@@ -101,12 +101,10 @@ class Monitor {
                 }
             }
 
-
             if (!cross) {
                 if (eval('this.check_' + selector.type + '(selector,shape,svgDom)')) {
                     cross = true;
                 }
-
             }
 
             if (cross) {
@@ -148,7 +146,6 @@ class Monitor {
         return vertex;
     }
 
-
     getFeaturePoints(shape) {
         let rect = this.getTrueRect(shape);
         let points = [];
@@ -173,8 +170,6 @@ class Monitor {
         }
         return points;
     }
-
-
 
     check_rectSelect(selector, shape, svg) {
 
@@ -248,9 +243,6 @@ class Monitor {
         return false;
     }
 
-
-
-
     check_straightSelect(selector, shape, svg) {
         let p1 = selector.transformCoordToGlobal([selector.shape.x1, selector.shape.y1])[0];
         let p2 = selector.transformCoordToGlobal([selector.shape.x2, selector.shape.y2])[0];
@@ -293,8 +285,6 @@ class Monitor {
         let rx = selector.shape.rx;
         let ry = selector.shape.ry;
         [cx, cy] = selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy);
-
-       
 
         if (shape.type == 'circle') {
             let p = [];
