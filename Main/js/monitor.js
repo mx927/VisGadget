@@ -61,71 +61,58 @@ class Monitor {
     /*********************************  元素检测 ************************************/
     getInclusion(selector) {
 
-        let selectCircle = this.selectAreaColor;
-        let allCircle = this.goal.getElementsByTagName('circle');
-        let allPath = this.goal.getElementsByTagName('path');
+        let allCircle = util.makeArray(this.goal.getElementsByTagName('circle'));
+        let allPath = util.makeArray(this.goal.getElementsByTagName('path'));
 
-        for (let circle of allCircle) { 
-            let shape = this.clone(circle);
-            let cx = shape.shape.cx;
-            let cy = shape.shape.cy;
-            let r = shape.shape.r;
-            let rect = shape.getBoundingRect();
-            [rect.x, rect.y] = shape.transformCoordToGlobal(rect.x, rect.y);
+        let allSVG = allCircle.concat(allPath);
+
+        for (let svgDom of allSVG) {
+            let shape = this.clone(svgDom);
             let cross = false;
+            let rect = this.getTrueRect(shape);
+            let featurePoints = this.getFeaturePoints(shape);
 
-            if(!rect.intersect(selector.getBoundingRect())){
-                continue;
+
+            // 边界矩形 相交检测
+            if (!rect.intersect(selector.getBoundingRect())) {
+                if (shape.type != 'path') {
+                    continue;
+                } else {
+                    let vertex = this.getTrueVertex(shape);
+                    let intersect = false;
+                    for (let d of vertex) {
+                        if (selector.contain(d[0], d[1])) {
+                            intersect = true;
+                            break;
+                        }
+                    }
+
+                    if (!intersect) {
+                        continue;
+                    }
+                }
             }
-            
-            let p = [];
-            p.push(shape.transformCoordToGlobal(cx, cy));
-            p.push(shape.transformCoordToGlobal(cx - r, cy));
-            p.push(shape.transformCoordToGlobal(cx + r, cy));
-            p.push(shape.transformCoordToGlobal(cx, cy - r));
-            p.push(shape.transformCoordToGlobal(cx, cy + r));
 
-            for (let point of p) {
-                if (selector.contain(point[0], point[1])) {
+            // 特征顶点 包含检测
+            for (let p of featurePoints) {
+                if (selector.contain(p[0], p[1])) {
                     cross = true;
                     break;
                 }
             }
 
-            if (!cross ) {
-                if (eval('this.check_' + selector.type + '(selector,shape)')) {
+
+            if (!cross) {
+                if (eval('this.check_' + selector.type + '(selector,shape,svgDom)')) {
                     cross = true;
                 }
+
             }
 
             if (cross) {
                 shape.attr({
                     style: {
-                        fill: selectCircle
-                    }
-                });
-                this.zr.add(shape);
-            }
-        }
-
-        for (let path of allPath) {
-            let shape = this.clone(path);
-            let rect = this.getTrueRect(shape);
-
-
-            if(!rect.intersect(selector.getBoundingRect())){
-                continue;
-            }
-
-
-            let p1 = shape.transformCoordToGlobal(rect.x, rect.y);
-            let p2 = shape.transformCoordToGlobal(rect.x + rect.width, rect.y + rect.height);
-            if (selector.contain(p1[0], p1[1]) && selector.contain(p2[0], p2[1]) &&
-                selector.contain(p1[0], p1[1] + rect.height) && selector.contain(p1[0] + rect.width, p1[1])) {
-
-                shape.attr({
-                    style: {
-                        fill: selectCircle
+                        fill: this.selectAreaColor
                     }
                 });
                 this.zr.add(shape);
@@ -138,47 +125,71 @@ class Monitor {
             }
         });
 
+
     }
-    getTrueRect(shape){
-        let rect = shape.getBoundingRect();
+    getTrueRect(shape) {
+        let rect = shape.getBoundingRect().clone();
         [rect.x, rect.y] = shape.transformCoordToGlobal(rect.x, rect.y);
         return rect;
     }
 
-
-    getVertex(shape){
-        let rect = this.getTrueRect(shape);
-        let vertex = [];
-
-        vertex.push([rect.x,rect.y]);
-        vertex.push([rect.x + rect.width,rect.y]);
-        vertex.push([rect.x,rect.y + rect.height]);
-        vertex.push([rect.x + rect.width,rect.y + rect.height]);
-
+    getTrueVertex(shape) {
+        let rect = shape.getBoundingRect();
+        let vertex = [
+            [rect.x, rect.y],
+            [rect.x + rect.width, rect.y],
+            [rect.x, rect.y + rect.height],
+            [rect.x + rect.width, rect.y + rect.height],
+        ];
+        for (let i in vertex) {
+            let d = vertex[i];
+            vertex[i] = shape.transformCoordToGlobal(d[0], d[1]);
+        }
         return vertex;
     }
 
-    check_rectSelect(rect, shape) {
 
-        let x = rect.getBoundingRect().x;
-        let y = rect.getBoundingRect().y;
-        let width = rect.getBoundingRect().width;
-        let height = rect.getBoundingRect().height;
+    getFeaturePoints(shape) {
+        let rect = this.getTrueRect(shape);
+        let points = [];
 
-        [x, y] = rect.transformCoordToGlobal(x, y);
-        [width, height] = rect.transformCoordToGlobal(width, height);
+        switch (shape.type) {
+            case 'circle':
+                let cx = shape.shape.cx;
+                let cy = shape.shape.cy;
+                let r = shape.shape.r;
+                [cx, cy] = shape.transformCoordToGlobal(cx, cy);
+                points.push([cx, cy]);
+                points.push([cx - r, cy]);
+                points.push([cx + r, cy]);
+                points.push([cx, cy - r]);
+                points.push([cx, cy + r]);
+                break;
+            case 'path':
+                let br = shape.getBoundingRect();
+                let p = shape.transformCoordToGlobal(br.x + br.width/2,br.y + br.height/2);
+                points.push(p);
+                break;
+        }
+        return points;
+    }
 
-        let lines = [
-            util.createLineByPoints([x, y], [x + width, y]),
-            util.createLineByPoints([x, y + height], [x + width, y + height]),
-            util.createLineByPoints([x, y], [x, y + height]),
-            util.createLineByPoints([x + width, y], [x + width, y + height])
-        ];
+
+
+    check_rectSelect(selector, shape, svg) {
+
+        let rect = this.getTrueRect(selector);
 
         if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
             let scale = shape.scale;
             let r = shape.shape.r;
+            let lines = [
+                util.createLineByPoints([rect.x, rect.y], [rect.x + rect.width, rect.y]),
+                util.createLineByPoints([rect.x, rect.y + rect.height], [rect.x + rect.width, rect.y + rect.height]),
+                util.createLineByPoints([rect.x, rect.y], [rect.x, rect.y + rect.height]),
+                util.createLineByPoints([rect.x + rect.width, rect.y], [rect.x + rect.width, rect.y + rect.height])
+            ];
             for (let line of lines) {
                 let d = util.calcDistanceByPointLine(cpoint, line, scale);
 
@@ -195,21 +206,41 @@ class Monitor {
                 }
             }
 
+        } else if (shape.type == 'path') {
+            let totaLength = svg.getTotalLength();
+            for (let len = 0; len < totaLength; len += totaLength * 0.02) {
+                let point = svg.getPointAtLength(len);
+                point = shape.transformCoordToGlobal(point.x, point.y);
+
+                if (selector.contain(point[0], point[1])) {
+                    return true;
+                }
+            }
         }
         return false;
     }
 
-    check_lassoSelect(lasso, shape) {
-  
-        let points = lasso.shape.points;
+    check_lassoSelect(selector, shape, svg) {
 
-        if(shape.type == 'circle'){
+        let points = selector.shape.points;
+
+        if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
-            let r= shape.shape.r;
+            let r = shape.shape.r;
             let scale = shape.scale;
-            for(let point of points){
-                let d = util.calcDistanceByPoints(point,cpoint,scale);
-                if(d<=r){
+            for (let point of points) {
+                let d = util.calcDistanceByPoints(point, cpoint, scale);
+                if (d <= r) {
+                    return true;
+                }
+            }
+        } else if (shape.type == 'path') {
+            let totaLength = svg.getTotalLength();
+            for (let len = 0; len < totaLength; len += totaLength * 0.05) {
+                let point = svg.getPointAtLength(len);
+                point = shape.transformCoordToGlobal(point.x, point.y);
+
+                if (selector.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -220,9 +251,9 @@ class Monitor {
 
 
 
-    check_straightSelect(straight, shape) {
-        let p1 = straight.transformCoordToGlobal([straight.shape.x1, straight.shape.y1])[0];
-        let p2 = straight.transformCoordToGlobal([straight.shape.x2, straight.shape.y2])[0];
+    check_straightSelect(selector, shape, svg) {
+        let p1 = selector.transformCoordToGlobal([selector.shape.x1, selector.shape.y1])[0];
+        let p2 = selector.transformCoordToGlobal([selector.shape.x2, selector.shape.y2])[0];
 
         let line1 = util.createLineByPoints(p1, p2);
 
@@ -236,25 +267,43 @@ class Monitor {
             if (d <= r) {
                 return true;
             }
+        } else if (shape.type == 'path') {
+            let totaLength = svg.getTotalLength();
+            for (let len = 0; len < totaLength; len += totaLength * 0.05) {
+                let point = svg.getPointAtLength(len);
+                point = shape.transformCoordToGlobal(point.x, point.y);
+
+                let d = util.calcDistanceByPointLine(point, line1, [1, 1]);
+
+                if (d > 3) {
+                    continue;
+                }
+
+                if (selector.contain(point[0], point[1])) {
+                    return true;
+                }
+            }
         }
         return false;
     }
 
-    check_ellipseSelect(ellipse, shape) {
+    check_ellipseSelect(selector, shape,svg) {
         let cx = 0,
             cy = 0;
-        let rx = ellipse.shape.rx;
-        let ry = ellipse.shape.ry;
-        [cx, cy] = ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy);
+        let rx = selector.shape.rx;
+        let ry = selector.shape.ry;
+        [cx, cy] = selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy);
 
-        let p = [];
-        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx - ellipse.shape.rx, ellipse.shape.cy));
-        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx + ellipse.shape.rx, ellipse.shape.cy));
-        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy + ellipse.shape.ry));
-        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy - ellipse.shape.ry));
-        p.push(ellipse.transformCoordToGlobal(ellipse.shape.cx, ellipse.shape.cy));
+       
 
         if (shape.type == 'circle') {
+            let p = [];
+            p.push(selector.transformCoordToGlobal(selector.shape.cx - selector.shape.rx, selector.shape.cy));
+            p.push(selector.transformCoordToGlobal(selector.shape.cx + selector.shape.rx, selector.shape.cy));
+            p.push(selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy + selector.shape.ry));
+            p.push(selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy - selector.shape.ry));
+            p.push(selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy));
+
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
             let scale = shape.scale;
             let r = shape.shape.r;
@@ -296,20 +345,13 @@ class Monitor {
                     return true;
                 }
             }
-        }
-        return false;
-    }
+        }else if(shape.type == 'path'){
+            let totaLength = svg.getTotalLength();
+            for (let len = 0; len < totaLength; len += totaLength * 0.05) {
+                let point = svg.getPointAtLength(len);
+                point = shape.transformCoordToGlobal(point.x, point.y);
 
-    check_polylineSelect(polyline, shape) {
-        let points = polyline.shape.points;
-
-        if(shape.type == 'circle'){
-            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
-            let r= shape.shape.r;
-            let scale = shape.scale;
-            for(let point of points){
-                let d = util.calcDistanceByPoints(point,cpoint,scale);
-                if(d<=r){
+                if (selector.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -317,23 +359,60 @@ class Monitor {
         return false;
     }
 
-    check_freeSelect(free, shape) {
-        let points = free.shape.points;
+    check_polylineSelect(selector, shape,svg) {
+        let points = selector.shape.points;
 
-        if(shape.type == 'circle'){
+        if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
-            let r= shape.shape.r;
+            let r = shape.shape.r;
             let scale = shape.scale;
-            for(let point of points){
-                let d = util.calcDistanceByPoints(point,cpoint,scale);
-                if(d<=r){
+            for (let point of points) {
+                let d = util.calcDistanceByPoints(point, cpoint, scale);
+                if (d <= r) {
+                    return true;
+                }
+            }
+        }else if(shape.type == 'path'){
+            let totaLength = svg.getTotalLength();
+            for (let len = 0; len < totaLength; len += totaLength * 0.05) {
+                let point = svg.getPointAtLength(len);
+                point = shape.transformCoordToGlobal(point.x, point.y);
+
+                if (selector.contain(point[0], point[1])) {
                     return true;
                 }
             }
         }
         return false;
     }
-    /*********************************  克隆元素 ************************************/
+
+    check_freeSelect(selector, shape,svg) {
+        let points = selector.shape.points;
+
+        if (shape.type == 'circle') {
+            let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
+            let r = shape.shape.r;
+            let scale = shape.scale;
+            for (let point of points) {
+                let d = util.calcDistanceByPoints(point, cpoint, scale);
+                if (d <= r) {
+                    return true;
+                }
+            }
+        }else if(shape.type == 'path'){
+            let totaLength = svg.getTotalLength();
+            for (let len = 0; len < totaLength; len += totaLength * 0.05) {
+                let point = svg.getPointAtLength(len);
+                point = shape.transformCoordToGlobal(point.x, point.y);
+
+                if (selector.contain(point[0], point[1])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /*********************************  克隆SVG元素 ************************************/
     clone(svg) {
         let style = window.getComputedStyle(svg, "");
         let shape = null;
@@ -363,19 +442,11 @@ class Monitor {
                         y: 100,
                         brushType: 'both',
                         fill: 'steelblue',
-
-
                         lineWidth: 10,
-
-                    },
-                    draggable: true
+                    }
                 });
-
-
                 break;
         }
-
-
 
         if (shape && style.transform != 'none') {
             let matrix = Monitor.zrender.matrix.create();
@@ -387,7 +458,7 @@ class Monitor {
                 svg = svg.parentNode;
             }
 
-            //导致， 从最顶级的父节点开始 合并transform样式
+            //倒置， 从最顶级的父节点开始 合并transform样式
             nodeArr.reverse();
             for (let node of nodeArr) {
                 let transform = window.getComputedStyle(node, '').transform;

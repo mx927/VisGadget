@@ -95,6 +95,17 @@ class util {
         return util.calcDistanceByPoints(point,[line2.tx,line2.ty],scale);
 
     }
+
+
+    static makeArray(pseudoArray){
+        let array = [];
+        
+        for(let item of pseudoArray){
+            array.push(item);
+        }
+
+        return array;
+    }
 }
 util.Infinity = 9999999;
 
