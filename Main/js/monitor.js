@@ -8,21 +8,17 @@ class Monitor {
      * @param  {} goal 需要监听的SVG元素
      */
     constructor(goal) {
-
-
+        let svgRect = goal.getClientRects()[0];
         this.goal = goal;
-        let svgRect = this.goal.getClientRects()[0];
         this.shapes = [];
         this.currentCallBack = null;
         this.currentSelectArea = null;
-        this.selectArea = [];
 
-        this.tasks = [];
         this.renderer = 'canvas';
         this.drawBoard = null;
         this.container = document.createElement('div');
         this.backgroundColor_active = 'rgba(255, 255, 255, 0)';
-        this.backgroundColor_inactive = 'rgba(236, 154, 154, 0.3)';
+        this.backgroundColor_inactive = 'rgba(236, 154, 154, 0.1)';
 
         // 关于选择器的样式设定
         this.selectAreaColor = 'steelblue';
@@ -38,14 +34,26 @@ class Monitor {
         this.container.style.height = goal.height.animVal.value + 'px';
         this.container.style.left = svgRect.left + 'px';
         this.container.style.top = svgRect.top + Monitor.getScrollTop() + 'px';
-        this.container.style.backgroundColor = 'rgba(236, 154, 154, 0.3)';
+        this.container.style.backgroundColor = this.backgroundColor_inactive;
         this.container.style.pointerEvents = 'none';
-        this.container.style.zIndex = 999;
+
         this.zr = Monitor.zrender.init(this.container, {
             renderer: this.renderer,
             devicePixelRatio: 3
-        })
+        });
 
+
+        // 初始化fliter
+        this.filter = {
+            rectSelect: null,
+            lassoSelect: null,
+            straightSelect: null,
+            polylineSelect: null,
+            freeSelect: null
+        };
+
+        this.layerManager = new LayerManager(this.zr);
+        this.markId = 'visgadgetMarkId_1';
 
         //获取画板。为svg或者canvas元素
         setTimeout(() => {
@@ -55,16 +63,32 @@ class Monitor {
         document.body.appendChild(this.container);
 
 
-
     }
 
-    /*********************************  元素检测 ************************************/
-    getInclusion(selector) {
+    /*********************************  设置过滤器 ********************************/
+    setFilter(typename, func) {
 
+        if (this.filter.hasOwnProperty(typename) && typename != 'all') {
+            this.filter[typename] = func;
+        } else if (typename == 'all') {
+            for (let i in this.filter) {
+                this.filter[i] = func;
+            }
+        } else {
+            console.warn('fliter 类型名称错误 ! ');
+        }
+    }
+
+    /*********************************  元素检测 *********************************/
+    getInclusion() {
         let allCircle = util.makeArray(this.goal.getElementsByTagName('circle'));
         let allPath = util.makeArray(this.goal.getElementsByTagName('path'));
-
         let allSVG = allCircle.concat(allPath);
+        let newLayer = {color:util.getRandomColor(),hidden:false,marks:{}};
+
+        if (this.filter[this.currentSelectArea.type] != null) {
+            allSVG = allSVG.filter(this.filter[this.currentSelectArea.type]);
+        }
 
         for (let svgDom of allSVG) {
             let shape = this.clone(svgDom);
@@ -72,16 +96,15 @@ class Monitor {
             let rect = this.getTrueRect(shape);
             let featurePoints = this.getFeaturePoints(shape);
 
-
             // 边界矩形 相交检测
-            if (!rect.intersect(selector.getBoundingRect())) {
+            if (!rect.intersect(this.currentSelectArea.getBoundingRect())) {
                 if (shape.type != 'path') {
                     continue;
                 } else {
                     let vertex = this.getTrueVertex(shape);
                     let intersect = false;
                     for (let d of vertex) {
-                        if (selector.contain(d[0], d[1])) {
+                        if (this.currentSelectArea.contain(d[0], d[1])) {
                             intersect = true;
                             break;
                         }
@@ -95,36 +118,36 @@ class Monitor {
 
             // 特征顶点 包含检测
             for (let p of featurePoints) {
-                if (selector.contain(p[0], p[1])) {
+                if (this.currentSelectArea.contain(p[0], p[1])) {
                     cross = true;
                     break;
                 }
             }
 
+            // 进行第二次判定
             if (!cross) {
-                if (eval('this.check_' + selector.type + '(selector,shape,svgDom)')) {
+                if (eval('this.check' + this.currentSelectArea.type + '(shape,svgDom)')) {
                     cross = true;
                 }
             }
 
             if (cross) {
-                shape.attr({
-                    style: {
-                        fill: this.selectAreaColor
-                    }
-                });
-                this.zr.add(shape);
+                newLayer.marks[util.getRandomCode()] = {
+                    svgDom:svgDom,
+                    shape:shape
+                }
             }
         }
-
-        selector.attr({
-            style: {
-                opacity: 0
-            }
-        });
-
-
+        if(util.getObjLen(newLayer.marks)>0){
+            this.layerManager.add(newLayer);
+        }else{
+            delete newLayer.color;
+            delete newLayer.hidden;
+            delete newLayer.marks;
+            newLayer = null;
+        }
     }
+
     getTrueRect(shape) {
         let rect = shape.getBoundingRect().clone();
         [rect.x, rect.y] = shape.transformCoordToGlobal(rect.x, rect.y);
@@ -164,16 +187,16 @@ class Monitor {
                 break;
             case 'path':
                 let br = shape.getBoundingRect();
-                let p = shape.transformCoordToGlobal(br.x + br.width/2,br.y + br.height/2);
+                let p = shape.transformCoordToGlobal(br.x + br.width / 2, br.y + br.height / 2);
                 points.push(p);
                 break;
         }
         return points;
     }
 
-    check_rectSelect(selector, shape, svg) {
+    checkRect(shape, svg) {
 
-        let rect = this.getTrueRect(selector);
+        let rect = this.getTrueRect(this.currentSelectArea);
 
         if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
@@ -207,7 +230,7 @@ class Monitor {
                 let point = svg.getPointAtLength(len);
                 point = shape.transformCoordToGlobal(point.x, point.y);
 
-                if (selector.contain(point[0], point[1])) {
+                if (this.currentSelectArea.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -215,9 +238,9 @@ class Monitor {
         return false;
     }
 
-    check_lassoSelect(selector, shape, svg) {
+    checkLasso(shape, svg) {
 
-        let points = selector.shape.points;
+        let points = this.currentSelectArea.shape.points;
 
         if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
@@ -235,7 +258,7 @@ class Monitor {
                 let point = svg.getPointAtLength(len);
                 point = shape.transformCoordToGlobal(point.x, point.y);
 
-                if (selector.contain(point[0], point[1])) {
+                if (this.currentSelectArea.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -243,9 +266,9 @@ class Monitor {
         return false;
     }
 
-    check_straightSelect(selector, shape, svg) {
-        let p1 = selector.transformCoordToGlobal([selector.shape.x1, selector.shape.y1])[0];
-        let p2 = selector.transformCoordToGlobal([selector.shape.x2, selector.shape.y2])[0];
+    checkStraight(shape, svg) {
+        let p1 = this.currentSelectArea.transformCoordToGlobal([this.currentSelectArea.shape.x1, this.currentSelectArea.shape.y1])[0];
+        let p2 = this.currentSelectArea.transformCoordToGlobal([this.currentSelectArea.shape.x2, this.currentSelectArea.shape.y2])[0];
 
         let line1 = util.createLineByPoints(p1, p2);
 
@@ -271,7 +294,7 @@ class Monitor {
                     continue;
                 }
 
-                if (selector.contain(point[0], point[1])) {
+                if (this.currentSelectArea.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -279,20 +302,20 @@ class Monitor {
         return false;
     }
 
-    check_ellipseSelect(selector, shape,svg) {
+    checkEllipse(shape, svg) {
         let cx = 0,
             cy = 0;
-        let rx = selector.shape.rx;
-        let ry = selector.shape.ry;
-        [cx, cy] = selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy);
+        let rx = this.currentSelectArea.shape.rx;
+        let ry = this.currentSelectArea.shape.ry;
+        [cx, cy] = this.currentSelectArea.transformCoordToGlobal(this.currentSelectArea.shape.cx, this.currentSelectArea.shape.cy);
 
         if (shape.type == 'circle') {
             let p = [];
-            p.push(selector.transformCoordToGlobal(selector.shape.cx - selector.shape.rx, selector.shape.cy));
-            p.push(selector.transformCoordToGlobal(selector.shape.cx + selector.shape.rx, selector.shape.cy));
-            p.push(selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy + selector.shape.ry));
-            p.push(selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy - selector.shape.ry));
-            p.push(selector.transformCoordToGlobal(selector.shape.cx, selector.shape.cy));
+            p.push(this.currentSelectArea.transformCoordToGlobal(this.currentSelectArea.shape.cx - this.currentSelectArea.shape.rx, this.currentSelectArea.shape.cy));
+            p.push(this.currentSelectArea.transformCoordToGlobal(this.currentSelectArea.shape.cx + this.currentSelectArea.shape.rx, this.currentSelectArea.shape.cy));
+            p.push(this.currentSelectArea.transformCoordToGlobal(this.currentSelectArea.shape.cx, this.currentSelectArea.shape.cy + this.currentSelectArea.shape.ry));
+            p.push(this.currentSelectArea.transformCoordToGlobal(this.currentSelectArea.shape.cx, this.currentSelectArea.shape.cy - this.currentSelectArea.shape.ry));
+            p.push(this.currentSelectArea.transformCoordToGlobal(this.currentSelectArea.shape.cx, this.currentSelectArea.shape.cy));
 
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
             let scale = shape.scale;
@@ -335,13 +358,13 @@ class Monitor {
                     return true;
                 }
             }
-        }else if(shape.type == 'path'){
+        } else if (shape.type == 'path') {
             let totaLength = svg.getTotalLength();
             for (let len = 0; len < totaLength; len += totaLength * 0.05) {
                 let point = svg.getPointAtLength(len);
                 point = shape.transformCoordToGlobal(point.x, point.y);
 
-                if (selector.contain(point[0], point[1])) {
+                if (this.currentSelectArea.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -349,8 +372,8 @@ class Monitor {
         return false;
     }
 
-    check_polylineSelect(selector, shape,svg) {
-        let points = selector.shape.points;
+    checkPolyline(shape, svg) {
+        let points = this.currentSelectArea.shape.points;
 
         if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
@@ -362,13 +385,13 @@ class Monitor {
                     return true;
                 }
             }
-        }else if(shape.type == 'path'){
+        } else if (shape.type == 'path') {
             let totaLength = svg.getTotalLength();
             for (let len = 0; len < totaLength; len += totaLength * 0.05) {
                 let point = svg.getPointAtLength(len);
                 point = shape.transformCoordToGlobal(point.x, point.y);
 
-                if (selector.contain(point[0], point[1])) {
+                if (this.currentSelectArea.contain(point[0], point[1])) {
                     return true;
                 }
             }
@@ -376,8 +399,8 @@ class Monitor {
         return false;
     }
 
-    check_freeSelect(selector, shape,svg) {
-        let points = selector.shape.points;
+    checkFreeSelect(shape, svg) {
+        let points = this.currentSelectArea.shape.points;
 
         if (shape.type == 'circle') {
             let cpoint = shape.transformCoordToGlobal(shape.shape.cx, shape.shape.cy);
@@ -389,20 +412,21 @@ class Monitor {
                     return true;
                 }
             }
-        }else if(shape.type == 'path'){
+        } else if (shape.type == 'path') {
             let totaLength = svg.getTotalLength();
             for (let len = 0; len < totaLength; len += totaLength * 0.05) {
                 let point = svg.getPointAtLength(len);
                 point = shape.transformCoordToGlobal(point.x, point.y);
 
-                if (selector.contain(point[0], point[1])) {
+                if (this.currentSelectArea.contain(point[0], point[1])) {
                     return true;
                 }
             }
         }
         return false;
     }
-    /*********************************  克隆SVG元素 ************************************/
+
+    /*********************************  克隆SVG元素 *********************************/
     clone(svg) {
         let style = window.getComputedStyle(svg, "");
         let shape = null;
@@ -421,7 +445,7 @@ class Monitor {
                         stroke: style.stroke,
                         lineWidth: parseFloat(style.strokeWidth)
                     }
-                })
+                });
                 break;
             case 'path':
                 let pathStr = style.d.split('(')[1].split(')')[0];
@@ -469,97 +493,23 @@ class Monitor {
 
         return shape;
     }
+
     /*********************************  画图相关 ************************************/
 
-    /**
-     * 指针模式
-     */
-    pointerMode() {
-        this.cancel();
-        this._pointerSelect();
+
+    PointerMode() {
+        this.Active();
+
 
     }
 
-    rectSelect() {
-        this.cancel();
-        this._rectSelect();
-    }
-
-    ellipseSelect() {
-        this.cancel();
-        this._ellipseSelect();
-    }
-
-    lassoSelect() {
-        this.cancel();
-        this._lassoSelect();
-    }
-
-    straightSelect() {
-        this.cancel();
-        this._straightSelect();
-    }
-
-    polylineSelect() {
-        this.cancel();
-        this._polylineSelect();
-    }
-
-    freeSelect() {
-        this.cancel();
-        this._freeSelect();
-    }
-
-    selectComplete(restart) {
-        let type = this.currentSelectArea.type;
-
-        this.getInclusion(this.currentSelectArea);
-
-        eval('this.' + type + '()');
-    }
-
-    cancel() {
-        this.container.style.pointerEvents = 'none';
-        this.container.style.backgroundColor = this.backgroundColor_inactive;
-        this.currentCallBack = null;
-
-        this.container.onclick = null;
-        this.container.ondbclick = null;
-        this.container.onmouseup = null;
-        this.container.onmousedown = null;
-        this.container.onmousemove = null;
-        this.container.onmouseout = null;
-
-        if (this.currentSelectArea) {
-            this.zr.remove(this.currentSelectArea);
-            this.currentSelectArea = null;
-        }
-
-
-        for (let selectShape of this.selectArea) {
-            selectShape.attr('draggable', false);
-        }
-    }
-
-    /*********************************  内部函数 ************************************/
-
-    _pointerSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
-
-        for (let selectShape of this.selectArea) {
-            selectShape.attr('draggable', true);
-        }
-
-    }
-
-    _rectSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
+    RectMode() {
+        let typeName = 'Rect';
+        this.Active();
 
         this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Rect({
-                type: 'rectSelect',
+                type: typeName,
                 zlevel: this.selectAreaZLevel,
                 shape: {
                     x: ev.offsetX,
@@ -590,7 +540,7 @@ class Monitor {
                             }
                         })
                     }
-                }
+                };
 
                 this.container.onmouseup = this.container.onmouseout = (ev) => {
                     if (this.currentSelectArea) {
@@ -615,26 +565,26 @@ class Monitor {
                                 width: width,
                                 height: height
                             }
-                        })
+                        });
 
                         this.container.onmousemove = null;
                         this.container.onmouseup = null;
                         this.container.onmouseout = null;
 
-                        this.selectComplete();
+                        this.SelectComplete();
                     }
                 }
             }, 100);
         }
     }
 
-    _ellipseSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
+    EllipseMode() {
+        let typeName = 'Ellipse';
+        this.Active();
 
         this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Ellipse({
-                type: 'ellipseSelect',
+                type: typeName,
                 zlevel: this.selectAreaZLevel,
                 shape: {
                     ox: ev.offsetX,
@@ -649,7 +599,8 @@ class Monitor {
                     opacity: this.selectAreaOpacity,
                     stroke: 'black'
                 }
-            })
+            });
+
             this.zr.add(this.currentSelectArea);
 
             this.container.onmousedown = null;
@@ -676,7 +627,7 @@ class Monitor {
             setTimeout(() => {
                 this.container.onmouseup = this.container.onmouseout = (ev) => {
                     if (this.currentSelectArea) {
-                        this.selectComplete();
+                        this.SelectComplete();
                     }
                 }
             }, 100);
@@ -684,14 +635,13 @@ class Monitor {
 
     }
 
-    _lassoSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
-
+    LassoMode() {
+        let typeName = 'Lasso';
+        this.Active();
 
         this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Polygon({
-                type: 'lassoSelect',
+                type: 'Lasso',
                 zlevel: this.selectAreaZLevel,
                 shape: {
                     points: [
@@ -703,7 +653,7 @@ class Monitor {
                     fill: this.selectAreaColor,
                     opacity: this.selectAreaOpacity
                 }
-            })
+            });
 
             this.zr.add(this.currentSelectArea);
 
@@ -734,7 +684,7 @@ class Monitor {
                             }
                         });
 
-                        this.selectComplete();
+                        this.SelectComplete();
                     }
                 }
             }, 100);
@@ -742,13 +692,13 @@ class Monitor {
 
     }
 
-    _straightSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
+    StraightMode() {
+        let typeName = 'Straight';
+        this.Active();
 
         this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Line({
-                type: 'straightSelect',
+                type: typeName,
                 zlevel: this.selectAreaZLevel,
                 shape: {
                     x1: parseFloat(ev.offsetX),
@@ -787,25 +737,24 @@ class Monitor {
                                 y2: parseFloat(ev.offsetY)
                             }
                         })
-                        this.selectComplete();
+                        this.SelectComplete();
                     }
                 }
             }, 100);
         }
     }
 
-    _polylineSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
+    PolylineMode() {
+        let typeName = 'Polyline';
+        this.Active();
 
-        let _this = this;
-        _this.container.onclick = function (ev) {
+        this.container.onclick =  (ev) => {
             // 第一次点击，新建图形
-            if (_this.currentSelectArea == null) {
-                _this.currentSelectArea = new Monitor.zrender.Polyline({
-                    type: 'polylineSelect',
+            if (this.currentSelectArea == null) {
+                this.currentSelectArea = new Monitor.zrender.Polyline({
+                    type: typeName,
 
-                    zlevel: _this.selectAreaZLevel,
+                    zlevel: this.selectAreaZLevel,
                     shape: {
                         points: [
                             [ev.offsetX, ev.offsetY],
@@ -813,53 +762,52 @@ class Monitor {
                         ]
                     },
                     style: {
-                        stroke: _this.selectAreaColor,
-                        lineWidth: _this.selectAreaLineWidth,
-                        opacity: _this.selectAreaOpacity
+                        stroke: this.selectAreaColor,
+                        lineWidth: this.selectAreaLineWidth,
+                        opacity: this.selectAreaOpacity
                     }
-                })
-                _this.zr.add(_this.currentSelectArea);
+                });
+                this.zr.add(this.currentSelectArea);
             } else {
 
-                let points = _this.currentSelectArea.shape.points;
+                let points = this.currentSelectArea.shape.points;
                 points.push([ev.offsetX, ev.offsetY]);
                 points.push([ev.offsetX, ev.offsetY]);
-                _this.currentSelectArea.attr({
+                this.currentSelectArea.attr({
                     shape: {
                         points: points
                     }
                 })
             }
-        }
+        };
 
-        _this.container.onmousemove = function (ev) {
-            if (_this.currentSelectArea) {
-                let points = _this.currentSelectArea.shape.points;
+        this.container.onmousemove =  (ev) => {
+            if (this.currentSelectArea) {
+                let points = this.currentSelectArea.shape.points;
                 points = points.slice(0, points.length - 1);
                 points.push([ev.offsetX, ev.offsetY]);
-                _this.currentSelectArea.attr({
+                this.currentSelectArea.attr({
                     shape: {
                         points: points
                     }
                 });
             }
-        }
+        };
 
-        _this.container.onmousemout = _this.container.ondblclick = function (ev) {
-            if (_this.currentSelectArea) {
-                _this.selectComplete();
+        this.container.onmousemout = this.container.ondblclick =  (ev) => {
+            if (this.currentSelectArea) {
+                this.SelectComplete();
             }
-        }
+        };
     }
 
-
-    _freeSelect() {
-        this.container.style.pointerEvents = 'auto';
-        this.container.style.backgroundColor = this.backgroundColor_active;
+    FreeSelectMode() {
+        let typeName = 'FreeSelect';
+        this.Active();
 
         this.container.onmousedown = (ev) => {
             this.currentSelectArea = new Monitor.zrender.Polyline({
-                type: 'freeSelect',
+                type: typeName,
 
                 zlevel: this.selectAreaZLevel,
                 shape: {
@@ -893,13 +841,61 @@ class Monitor {
             setTimeout(() => {
                 this.container.onmouseup = this.container.onmouseout = (ev) => {
                     if (this.currentSelectArea) {
-                        this.selectComplete();
+                        this.SelectComplete();
                     }
                 }
             }, 100);
         }
     }
 
+    SelectComplete(restart) {
+        let type = this.currentSelectArea.type;
+
+        this.getInclusion();
+
+        eval('this.' + type + 'Mode()');
+    }
+
+    Active(){
+        this.Cancel();
+        this.container.style.pointerEvents = 'auto';
+        this.container.style.backgroundColor = this.backgroundColor_active;
+    }
+
+    Cancel() {
+        this.container.style.pointerEvents = 'none';
+        this.container.style.backgroundColor = this.backgroundColor_inactive;
+        this.currentCallBack = null;
+
+        this.container.onclick = null;
+        this.container.ondbclick = null;
+        this.container.onmouseup = null;
+        this.container.onmousedown = null;
+        this.container.onmousemove = null;
+        this.container.onmouseout = null;
+
+        if (this.currentSelectArea) {
+            this.zr.remove(this.currentSelectArea);
+            this.currentSelectArea = null;
+        }
+
+    }
+
+    Zoom(){
+
+    }
+
+    Rotate(){
+
+    }
+
+    Annotate(){
+
+    }
+
+    Lens(){
+
+    }
 
     /** 获取滚动轴高度 */
     static getScrollTop() {

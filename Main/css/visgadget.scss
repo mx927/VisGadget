@@ -1,0 +1,198 @@
+// z-index 设置
+$visgadget-index: 10;
+$topbar-index: 11;
+
+
+//visgadget-theme:default
+$font-color: black;
+$topbar-color: #eeedef;
+$topbar-color-shdow:#c5c5c5;
+$topbar-color-hover: rgb(243, 232, 212);
+$topbar-shadow-color: #c5c5c5;
+$pannel-color: rgb(236, 237, 235);
+$tool-btn-color: white;
+$tool-btn-color-hover: rgb(243, 232, 212);
+$tool-btn-svg-color: black;
+
+// visgadget-theme:dark
+$font-color-dark: #06f31f;
+$topbar-color-dark: #06f31f;
+$topbar-color-shdow-dark: #0e871b;
+$topbar-color-hover-dark: rgb(6, 243, 31);
+$pannel-color-dark: rgb(18, 237, 65);
+$tool-btn-color-dark: #06f31f;
+$tool-btn-color-hover-dark: rgb(6, 243, 31);
+$tool-btn-svg-color-dark: #06f31f;
+
+@mixin font_color() {
+  color: $font-color;
+  [visgadget-theme="default"] & {
+    color: $font-color;
+  }
+  [visgadget-theme="dark"] & {
+    color: $font-color-dark;
+  }
+}
+
+@mixin topbar_color() {
+  background: $topbar-color;
+  box-shadow: 0 1px 1px $topbar-color-shdow;
+  &:hover{
+    background: $topbar-color-hover;
+  }
+
+  [visgadget-theme="dark"] & {
+    background: $topbar-color-dark;
+    box-shadow: 0 1px 1px $topbar-color-shdow-dark;
+    &:hover{
+      background: $topbar-color-hover-dark;
+    }
+  }
+}
+
+@mixin pannel_color() {
+  background: $pannel-color;
+  [visgadget-theme="dark"] & {
+    background: $pannel-color-dark;
+  }
+}
+
+@mixin toolbox_color(){
+  background: transparent;
+}
+
+@mixin tool_btn_color() {
+  background: $tool-btn-color;
+  svg{
+    fill:$tool-btn-svg-color;
+  }
+  &:hover {
+    background: $tool-btn-color-hover;
+  }
+  [visgadget-theme="dark"] & {
+    background: $tool-btn-color-dark;
+    svg{
+      fill:$tool-btn-svg-color-dark;
+    }
+    &:hover {
+      background: $tool-btn-color-hover-dark;
+    }
+  }
+}
+
+// 尺寸设置
+$topbar-height: 20px;
+$toolbox-height: 45%;
+
+@mixin no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none
+  }
+  scrollbar-width: none;
+}
+
+@mixin no-select {
+  webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Chrome/Safari/Opera */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently*/
+}
+
+#visgadget {
+  position: absolute;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  @include font_color();
+  @include no-select;
+
+  .topbar {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: $topbar-height;
+    border-radius: 9px 9px 0 0;
+    border-width: 0;
+    text-align: center;
+    font-size: 75%;
+    font-family: "微软雅黑";
+    font-weight: bolder;
+    letter-spacing: 1px;
+    line-height: $topbar-height;
+    z-index: $topbar-index;
+    @include topbar_color();
+  }
+
+  .pannel {
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    top: $topbar-height;
+    bottom: 0;
+    opacity: 1;
+    transition: opacity 0.5s;
+    @include pannel_color()
+  }
+
+  .toolbox {
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: $toolbox-height;
+    overflow-y: scroll;
+    @include toolbox_color();
+    @include no-scrollbar;
+  }
+
+  .toolbox-btn {
+    position: absolute;
+    border-radius: 9px;
+    @include tool_btn_color();
+    p {
+      position: absolute;
+      margin: 0;
+      padding: 0;
+      bottom: 0;
+      border: 0;
+      width: 100%;
+      font-size: 55%;
+      text-align: center;
+    }
+
+    svg {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      top: 17.5%;
+      left: 25%;
+      background: transparent;
+      vertical-align: middle;
+    }
+  }
+
+  .layerbox {
+    position: absolute;
+    background: transparent;
+    width: 100%;
+    height: 100% - $toolbox-height - 3%;
+    left: 0;
+    top: $toolbox-height + 3%;
+  }
+
+}
+
+
+
+
+
+
+
+
+
